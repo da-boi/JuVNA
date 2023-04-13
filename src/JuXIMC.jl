@@ -3,8 +3,8 @@
 
 module JuXIMC
 
-# using StringViews
-# using Printf
+using StringViews
+using Printf
 
 include("cenums.jl")
 include("ctypes.jl")
