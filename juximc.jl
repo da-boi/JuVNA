@@ -1,6 +1,7 @@
 # Load library
 
 
+module JuXIMC
 
 import Base.Libc.Libdl: dlopen, dlclose, dlsym
 using StringViews
@@ -582,7 +583,7 @@ function setupDevices(probeflags::UInt32,enumhints::Base.CodeUnits{UInt8,String}
     return devcount, devenum, enumnames
 end
 
-
+end
 
 
 
