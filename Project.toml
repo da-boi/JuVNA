@@ -1,3 +1,9 @@
+name = "JuXIMC"
+uuid = "88c757fa-87cc-459a-a7bb-a68242c6a82c"
+authors = ["bergermann <dominik.bergermann@rwth-aachen.de> and contributors"]
+version = "0.1.0"
+
+
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
