@@ -1,2 +1,1 @@
 # JuXIMC
-# JuXIMC
