@@ -7,7 +7,7 @@ function *(i,u::Symbol)
     if haskey(Units,u)
         return i*Units[u]
     else
-        error("Unit not supported")
+        error("Unit not supported.")
     end
 end
 
@@ -15,7 +15,7 @@ function /(i,u::Symbol)
     if haskey(Units,u)
         return i/Units[u]
     else
-        error("Unit not supported")
+        error("Unit not supported.")
     end
 end
 
