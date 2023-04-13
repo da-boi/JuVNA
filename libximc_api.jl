@@ -1,6 +1,11 @@
 
+
+
+
+import Base.Libc.Libdl: dlopen, dlclose, dlsym
+
 # function loadDLL()
-#     pathximc = joinpath()
+#     pathximc = joinpath("XIMC","ximc-2.13.6","ximc")
 
 #     if occursin("windows",lowercase(ENV["OS"]))
 #         if occursin("64",ENV["PROCESSOR_ARCHITECTURE"])
@@ -12,6 +17,8 @@
 #         error("OS not implemented.")
 #     end
 # end
+
+# lib = loadDLL()
 
 const libximc = dlopen(joinpath("XIMC","ximc-2.13.6","ximc","win64","libximc"))
 

@@ -3,7 +3,6 @@
 
 module JuXIMC
 
-import Base.Libc.Libdl: dlopen, dlclose, dlsym
 using StringViews
 using Printf
 
@@ -12,22 +11,6 @@ include("ctypes.jl")
 include("jtypes.jl")
 include("libximc_api.jl")
 include("utilities.jl")
-
-function loadDLL()
-    pathximc = joinpath("XIMC","ximc-2.13.6","ximc")
-
-    if occursin("windows",lowercase(ENV["OS"]))
-        if occursin("64",ENV["PROCESSOR_ARCHITECTURE"])
-            return dlopen(joinpath(pathximc,"win64","libximc"))
-        else
-            return dlopen(joinpath(pathximc,"win32","libximc"))
-        end
-    else
-        error("OS not implemented.")
-    end
-end
-
-lib = loadDLL()
 
 function getDeviceInformation(device::DeviceId)
     deviceinfo = device_information_t()
