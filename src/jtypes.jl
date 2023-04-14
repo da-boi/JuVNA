@@ -1,5 +1,7 @@
 # type aliases for julia syntaxing
 
+export DeviceId, Position
+
 const DeviceId = device_t
 const DeviceEnumeration = device_enumeration_t
 const Calibration = calibration_t
