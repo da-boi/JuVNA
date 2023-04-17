@@ -237,13 +237,13 @@ end
 
 
 function commandWaitForStop(device::DeviceId; interval::UInt32=0x00000a,info::Bool=false)
-    info && println("\nWaiting for stop")
+    # info && println("\nWaiting for stop")
 
     result = command_wait_for_stop(device,interval)
 
-    info && println("\nResult: "*StringView(result))
+    # info && println("\nResult: "*StringView(result))
 
-    return result
+    # return result
 end
 
 const commandWaitForStop(device::DeviceId; interval::Integer=10,info::Bool=false) = commandWaitForStop(device; interval=UInt32(interval),info=info)
