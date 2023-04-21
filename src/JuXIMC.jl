@@ -258,6 +258,7 @@ end
 const commandWaitForStop(devices::DeviceId; interval::Integer=10,info::Bool=false) = commandWaitForStop(devices; interval=UInt32(interval),info=info)
 const commandWaitForStop(devices::DeviceId; interval::Real=10,info::Bool=false) = commandWaitForStop(devices; interval=UInt32(interval),info=info)
 
+
 function enumerateDevices(flags,hints::Union{Base.CodeUnits{UInt8, String},String})
     hints = Vector{UInt8}(hints)
 
