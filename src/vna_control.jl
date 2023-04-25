@@ -250,19 +250,17 @@ function saveS2P(socket::TCPSocket,fileURL::String)
     )
 end
 
-Int(data::Array{UInt8}) = parse(Int, String(data))
+Core.Int(data::Array{UInt8}) = parse(Int, String(data))
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
 
-        send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n")
-        send(socket,"FORMat:DATA REAL,64\n") # Returns 2 Bytes of Data
-        send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Returns 1 Bytes of Data
-
-        opcomplete = recv(socket,3) # Return Bytes of the VNA Commands above
-
-        send(socket,"CALCulate1:DATA? FDATA\n")
-         # Returns
+        send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n") # Select the Channel and Measurement Parameter S11
+        send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+        send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket,"SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
+        send(socket,"CALCulate:DATA? FDATA\n") # Read the S11 parameter Data
+        # Returns
         # 1 Byte: Block Data Delimiter '#'
         # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
         # n Bytes: N := number of data bytes to read in ASCII
@@ -290,9 +288,51 @@ function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
 
         sleep(waittime)
 
-        send(socket,"FORMat:DATA ASCii,0;*OPC?\n") # Returns 2 Bytes of Data
+        send(socket,"FORMat:DATA ASCii,0;*OPC?\n") # Set the return type back to ASCII
 
-        opcomplete = recv(socket,2)
+        return data
+    catch e
+        println(e)
+        error("Oepsie woepsie, something wrong uwu.")
+    end
+end
+
+function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
+    try
+
+        send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n") # Select the Channel and Measurement Parameter S11
+        send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+        send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket,"CALCulate:X:VALues?\n") # Read the frequency points
+        # Returns
+        # 1 Byte: Block Data Delimiter '#'
+        # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
+        # n Bytes: N := number of data bytes to read in ASCII
+        # N Bytes: data
+        # 1 Byte: End of line character 0x0A to indicate the end of the data block
+
+        # Wait for the Block Data Delimiter '#'
+        while recv(socket,1)[begin] != 0x23 end
+
+        numofdigitstoread = Int(recv(socket,1))
+
+        numofbytes = Int(recv(socket, numofdigitstoread))
+
+        data = Array{Float64}(undef,Int(Int(numofbytes)/8))
+
+        for i in 1:Int(Int(numofbytes)/8)
+            x = recv(socket,8)
+            data[i] = reinterpret(Float64, x)[begin]
+        end
+
+        hanginglinefeed = recv(socket,1)
+        if hanginglinefeed[begin] != 0x0A
+            error("End of Line Character expected to indicate end of data block")
+        end
+
+        sleep(waittime)
+
+        send(socket,"FORMat:DATA ASCii,0;*OPC?\n") # Set the return type back to ASCII
 
         return data
     catch e
