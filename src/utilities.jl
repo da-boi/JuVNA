@@ -1,6 +1,8 @@
 
 # some random stuff
 
+export x2steps, steps2x, Units
+
 import Base: *, /
 
 function *(i,u::Symbol)

@@ -24,21 +24,11 @@ commandMove(D,zeros(3),stagecals)
 vna = connectVNA()
 # instrumentSimplifiedSetup(vna)
 
-commandMove(D[4],28000,0)
-commandWaitForStop(D[4])
+devices = Devices(D,stagecals,stagecolls,stagezeros,stageborders)
 
-data = []
+b = PhysicalBooster(devices,)
 
-for i in 1:30
-    println(i,", ",getPos(D[4]))
-    commandMove(D[4],28000-250*i,0)
-    # command_wait_for_stop(D[4])
-    commandWaitForStop(D[4])
-    # sleep(1)
 
-    push!(data,getDataAsBinBlockTransfer(vna))
 
-    sleep(0.1)
-end
 
 

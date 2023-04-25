@@ -9,7 +9,6 @@ const DeviceInfo = device_information_t
 const Status = status_t
 const Position = get_position_t
 const Position(pos::Integer,upos::Integer) = Position(Cint(pos),Cint(upos))
-const Position(pos::Real,upos::Real) = Position(Cint(pos),Cint(upos))
 const MoveSettings = move_settings_t
 const EngineSettings = engine_settings_t
 const EngineSettingsCalb = engine_settings_calb_t
