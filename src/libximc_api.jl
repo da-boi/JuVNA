@@ -21,7 +21,7 @@ import Base.Libc.Libdl: dlopen, dlclose, dlsym
 # lib = loadDLL()
 
 # const libximc = dlopen(joinpath("XIMC","ximc-2.13.6","ximc","win64","libximc"))
-const libximc = dlopen(joinpath("src","JuXIMC.jl","src","win64","libximc"))
+const libximc = dlopen(joinpath("src","win64","libximc"))
 
 function set_feedback_settings(id, feedback_settings)
     ccall((:set_feedback_settings, :libximc), result_t, (device_t, Ptr{feedback_settings_t}), id, feedback_settings)

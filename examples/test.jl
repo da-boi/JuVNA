@@ -2,45 +2,38 @@
 
 using Dragoon
 
-include("vna_control.jl")
-include(joinpath("JuXIMC.jl","src","JuXIMC.jl"))
+include("../src/vna_control.jl")
+include("../src/JuXIMC.jl")
+
 include("stages.jl")
 
-JuXIMC.infoXIMC()
+infoXIMC()
 
-JuXIMC.setBindyKey(
-    joinpath(
-        dirname(@__DIR__),
-        "XIMC\\ximc-2.13.6\\ximc\\win64\\keyfile.sqlite"
-    )
-)
-
-devcount, devenum, enumnames = JuXIMC.setupDevices(JuXIMC.ENUMERATE_PROBE | JuXIMC.ENUMERATE_NETWORK,b"addr=134.61.12.184")
+devcount, devenum, enumnames = setupDevices(JuXIMC.ENUMERATE_PROBE | JuXIMC.ENUMERATE_NETWORK,b"addr=134.61.12.184")
 
 # ========================================================================================================================
 
-D = JuXIMC.openDevices(enumnames,stagenames)
-JuXIMC.checkOrdering(D,stagenames)
+D = openDevices(enumnames,stagenames)
+checkOrdering(D,stagenames)
 # JuXIMC.closeDevice(D[1:3])
 # D = D[4]
 
-JuXIMC.commandMove(D,[20,20,20],stagecals)
-JuXIMC.commandMove(D,zeros(3),stagecals)
+commandMove(D,[20,20,20],stagecals)
+commandMove(D,zeros(3),stagecals)
 
 vna = connectVNA()
-instrumentSimplifiedSetup(vna)
+# instrumentSimplifiedSetup(vna)
 
-JuXIMC.commandMove(D[4],28000,0)
-JuXIMC.command_wait_for_stop(D[4],0x00000a)
-JuXIMC.commandWaitForStop(D[4])
+commandMove(D[4],28000,0)
+commandWaitForStop(D[4])
 
 data = []
 
 for i in 1:30
-    println(i,", ",JuXIMC.getPos(D[4]))
-    JuXIMC.commandMove(D[4],28000-250*i,0)
-    JuXIMC.command_wait_for_stop(D[4],0x00000a)
-    # JuXIMC.commandWaitForStop(D[4])
+    println(i,", ",getPos(D[4]))
+    commandMove(D[4],28000-250*i,0)
+    # command_wait_for_stop(D[4])
+    commandWaitForStop(D[4])
     # sleep(1)
 
     push!(data,getDataAsBinBlockTransfer(vna))
