@@ -1,10 +1,19 @@
 # for testing purposes only
 
 using Dragoon
+using DelimitedFiles
+using CSV
 
 include("vna_control.jl")
-include(joinpath("JuXIMC.jl","src","JuXIMC.jl"))
-include("stages.jl")
+#include(joinpath("JuXIMC.jl","src","JuXIMC.jl"))
+
+include("JuXIMC.jl")
+#include("stages.jl")
+
+stagenames = Dict{String, Int}("Big Chungus" => 1, "Monica" => 2, "Alexanderson" => 3, "Bigger Chungus" => 4,)
+stagecals  = Dict{String, Tuple{Symbol,Int}}("Big Chungus" => (:mm,80), "Monica" => (:mm,800), "Alexanderson" => (:mm,800), "Bigger Chungus" => (:mm,80))
+
+
 
 JuXIMC.infoXIMC()
 
@@ -24,39 +33,49 @@ JuXIMC.checkOrdering(D,stagenames)
 # JuXIMC.closeDevice(D[1:3])
 # D = D[4]
 
-JuXIMC.commandMove(D,[20,20,20],stagecals)
-JuXIMC.commandMove(D,zeros(3),stagecals)
+#JuXIMC.commandMove(D,[20,20,20],stagecals)
+#JuXIMC.commandMove(D,zeros(3),stagecals)
+
+#DeviceID = D[4]
+#pos  = 10000 
+#upos = 0
+
+#JuXIMC.commandMove(DeviceID,pos,upos)
 
 vna = connectVNA()
-instrumentSimplifiedSetup(vna)
+instrumentSimplifiedSetup(vna, "{AAE0FD65-EEA1-4D1A-95EE-06B3FFCB32B7}", -20, 19E9, 3E9, 16384, 50000)
+
 
 JuXIMC.commandMove(D[4],28000,0)
 JuXIMC.command_wait_for_stop(D[4],0x00000a)
 JuXIMC.commandWaitForStop(D[4])
 
 data = []
+filename = "newfile.csv" 
 
-for i in 1:30
+
+for i in 1:50
     println(i,", ",JuXIMC.getPos(D[4]))
-    JuXIMC.commandMove(D[4],28000-250*i,0)
+    JuXIMC.commandMove(D[4],28000-500*i,0)
     JuXIMC.command_wait_for_stop(D[4],0x00000a)
-    # JuXIMC.commandWaitForStop(D[4])
-    # sleep(1)
-
+    JuXIMC.commandWaitForStop(D[4])
+  
     push!(data,getDataAsBinBlockTransfer(vna))
-
+    #println(typeof(data))
+    #println("Länge",length(data[i]))
+    file = open(filename, "w")  
+    writedlm(file, data, ',')
+    close(file)
     sleep(0.1)
 end
 
 
+#print(data)
 
 
 
 
-
-
-
-
+#=
 
 devices = Devices(D,stagecals,stagecolls,stagezeros,stageborders)
 
@@ -73,6 +92,8 @@ function commandMove(devices::Devices,x::Vector{<:Real},cal::Dict{String,Tuple{I
         command_move(devices[i],p[1],p[2])
     end
 end
+
+
 
 function move(booster::Dragoon.PhysicalBooster,newpos::Vector{Float64}; additive=false)
     if additive
@@ -99,10 +120,10 @@ function checkCollision(pos::Vector{<:Real},newpos::Vector{<:Real},)
     return false
 end
 
-b = Dragoon.PhysicalBooster(devices,)
+#b = Dragoon.PhysicalBooster(devices,)
 
 
-
+=#
 
 
 

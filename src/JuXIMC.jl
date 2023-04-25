@@ -246,8 +246,8 @@ function commandWaitForStop(device::DeviceId; interval::UInt32=0x00000a,info::Bo
     # return result
 end
 
-const commandWaitForStop(device::DeviceId; interval::Integer=10,info::Bool=false) = commandWaitForStop(device; interval=UInt32(interval),info=info)
-const commandWaitForStop(device::DeviceId; interval::Real=10,info::Bool=false) = commandWaitForStop(device; interval=UInt32(interval),info=info)
+#const commandWaitForStop(device::DeviceId; interval::Integer=10,info::Bool=false) = commandWaitForStop(device; interval=UInt32(interval),info=info)
+#const commandWaitForStop(device::DeviceId; interval::Real=10,info::Bool=false) = commandWaitForStop(device; interval=UInt32(interval),info=info)
 
 function commandWaitForStop(devices::Vector{DeviceId}; interval::UInt32=0x00000a,info::Bool=false)
     for i in eachindex(devices)
@@ -255,8 +255,8 @@ function commandWaitForStop(devices::Vector{DeviceId}; interval::UInt32=0x00000a
     end
 end
 
-const commandWaitForStop(devices::DeviceId; interval::Integer=10,info::Bool=false) = commandWaitForStop(devices; interval=UInt32(interval),info=info)
-const commandWaitForStop(devices::DeviceId; interval::Real=10,info::Bool=false) = commandWaitForStop(devices; interval=UInt32(interval),info=info)
+#const commandWaitForStop(devices::DeviceId; interval::Integer=10,info::Bool=false) = commandWaitForStop(devices; interval=UInt32(interval),info=info)
+#const commandWaitForStop(devices::DeviceId; interval::Real=10,info::Bool=false) = commandWaitForStop(devices; interval=UInt32(interval),info=info)
 
 function enumerateDevices(flags,hints::Union{Base.CodeUnits{UInt8, String},String})
     hints = Vector{UInt8}(hints)
