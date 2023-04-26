@@ -422,7 +422,7 @@ end
 function setSpeed(device::DeviceId,speed::Int; info=false)
     info && println("\nSet speed")
 
-    _, mvst = getMoveSettings(device)
+    mvst = getMoveSettings(device)
 
     info && println("Original speed: "*String(mvst.Speed))
 

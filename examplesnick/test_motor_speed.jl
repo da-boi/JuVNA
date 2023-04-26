@@ -3,14 +3,15 @@ include("../examplesdom/stages.jl")
 
 infoXIMC()
 
-devcount, devenum, enumnames = setupDevices(JuXIMC.ENUMERATE_PROBE | JuXIMC.ENUMERATE_NETWORK,b"addr=134.61.12.184")
+devcount, devenum, enumnames = setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,b"addr=134.61.12.184")
 
 # ========================================================================================================================
 
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
-# JuXIMC.closeDevice(D[1:3])
-# D = D[4]
+closeDevices(D[1:3])
+D = D[4]
 
-commandMove(D,[20,20,20],stagecals)
-commandMove(D,zeros(3),stagecals)
+setSpeed(D, 500)
+commandMove(D, 25000, 0)
+commandMove(D, 28000, 0)
