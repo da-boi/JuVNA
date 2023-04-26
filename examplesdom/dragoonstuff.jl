@@ -45,16 +45,16 @@ function move(booster::PhysicalBooster,newpos::Vector{Float64}; additive=false)
         commandMove(devices::Vector{DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Int,Symbol}}; info=false,inputunit=:mm)
 
         booster.pos += newpos
-        JuXIMC.commandMove(booster.devices.ids,booster.pos,booster.devices.stagecals;
+        commandMove(booster.devices.ids,booster.pos,booster.devices.stagecals;
             inputunit=:m)
-        JuXIMC.commandWaitForStop(booster.devices.id)
+        commandWaitForStop(booster.devices.id)
     else
         checkCollision(booster.pos,newpos) && error("Discs are about to collide!")
 
         booster.pos = copy(newpos)
         
-        JuXIMC.commandMove(booster.devices.ids,booster.pos,booster.devices.stagecals;
+        commandMove(booster.devices.ids,booster.pos,booster.devices.stagecals;
             inputunit=:m)
-        JuXIMC.commandWaitForStop(booster.devices.id)
+        commandWaitForStop(booster.devices.id)
     end
 end

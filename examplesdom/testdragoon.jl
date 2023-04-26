@@ -9,7 +9,7 @@ include("stages.jl")
 
 infoXIMC()
 
-devcount, devenum, enumnames = setupDevices(JuXIMC.ENUMERATE_PROBE | JuXIMC.ENUMERATE_NETWORK,b"addr=134.61.12.184")
+devcount, devenum, enumnames = setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,b"addr=134.61.12.184")
 
 # ========================================================================================================================
 
