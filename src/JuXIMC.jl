@@ -414,7 +414,7 @@ function resetMoveSettings(device::DeviceId)
 end
 
 function setMoveSettings(device::DeviceId,mvst::MoveSettings)
-    result = get_move_settings(device,Ref(mvst))
+    result = set_move_settings(device,Ref(mvst))
 
     return result
 end
@@ -424,13 +424,15 @@ function setSpeed(device::DeviceId,speed::Int; info=false)
 
     mvst = getMoveSettings(device)
 
-    info && println("Original speed: "*String(mvst.Speed))
+    info && println("Original speed: "*string(mvst.Speed))
 
     mvst.Speed = speed
 
+    println(mvst)
+
     result = setMoveSettings(device,mvst)
 
-    info && println("Write command result: "*String(result))
+    info && println("Write command result: "*string(result))
 end
 
 function getEngineSettings(device::DeviceId)
