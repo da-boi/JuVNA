@@ -1,7 +1,7 @@
 # Load library
 
 
-module JuXIMC
+# module JuXIMC
 
 export infoXIMC, setupDevices, 
     openDevice, openDevices, closeDevice, closeDevices, checkOrdering, 
@@ -597,7 +597,7 @@ end
 
 
 
-end
+# end
 
 
 
