@@ -15,14 +15,12 @@ devcount, devenum, enumnames = setupDevices(JuXIMC.ENUMERATE_PROBE | JuXIMC.ENUM
 
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
-# JuXIMC.closeDevice(D[1:3])
-# D = D[4]
 
 commandMove(D,[20,20,20],stagecals)
 commandMove(D,zeros(3),stagecals)
 
 vna = connectVNA()
-# instrumentSimplifiedSetup(vna)
+instrumentSimplifiedSetup(vna)
 
 devices = Devices(D,stagecals,stagecolls,stagezeros,stageborders)
 
