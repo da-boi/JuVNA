@@ -161,6 +161,10 @@ function isGreaterEqPosition(x::Position, y::Position)
     return (x.Position > y.Position) || ((x.Position == y.Position) && (x.uPosition >= y.uPosition))
 end
 
+function isGreaterPosition(x::Position, y::Position)
+    return (x.Position > y.Position) || ((x.Position == y.Position) && (x.uPosition > y.uPosition))
+end
+
 function commandLeft(device::DeviceId; info=false)
     info && println("\nMoving left")
 

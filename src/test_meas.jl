@@ -35,9 +35,11 @@ JuXIMC.checkOrdering(D,stagenames)
 f_center::Float64 = 19e9
 f_span::Float64 = 3e9
 sweeppoints::Int = 16384
+#sweeppoints::Int = 5001
 
 vna = connectVNA()
 instrumentSimplifiedSetup(vna, "{AAE0FD65-EEA1-4D1A-95EE-06B3FFCB32B7}", -20, f_center, f_span, sweeppoints, 50000)
+getDataAsBinBlockTransfer(vna)
 
 data = Vector{Vector{Float64}}(undef, 0)
 pos_data = Vector{JuXIMC.Position}(undef, 0)
