@@ -286,10 +286,6 @@ function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
 
         send(socket,"FORMat:DATA ASCii,0;*OPC?\n") # Set the return type back to ASCII
 
-        recv(socket)
-
-        #send(socket,"SENSe:SWEep:TIME?\n") # Set the return type back to ASCII
-
         return data
     catch e
         println(e)
@@ -299,7 +295,6 @@ end
 
 function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
-
         send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n") # Select the Channel and Measurement Parameter S11
         send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
         send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
