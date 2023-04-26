@@ -6,7 +6,7 @@ Included is a file to control Keysight PNA 5224B with Julia, suited to our speci
 ### Installation
 Clone directly into directory of your choice. Not installable via package manager (yet).
 
-To use package run
+If used together with the Dragoon optimization package for MADMAX run
 ```julia
 julia> using Pkg
 julia> Pkg.add("https://github.com/mppmu/BoostFractor.jl.git")
