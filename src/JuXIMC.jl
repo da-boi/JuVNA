@@ -153,6 +153,14 @@ function getPosition(devices::DeviceId...; fmt::Type=Matrix)
     return P
 end
 
+function isSamePosition(x::Position, y::Position)
+    return (x.Position == y.Position) && (x.uPosition == y.uPosition)
+end
+
+function isGreaterEqPosition(x::Position, y::Position)
+    return (x.Position > y.Position) || ((x.Position == y.Position) && (x.uPosition >= y.uPosition))
+end
+
 function commandLeft(device::DeviceId; info=false)
     info && println("\nMoving left")
 
@@ -179,7 +187,7 @@ const commandMove(device::DeviceId,pos::Real,upos::Real) = commandMove(device,In
 function commandMove(device::DeviceId,pos::Position; info=false)
     info && println("\nGoing to $pos, $upos")
 
-    result = command_move(device,pos.Position,upos.uPosition)
+    result = command_move(device,pos.Position,pos.uPosition)
 
     info && println("\nResult: $result")
 
