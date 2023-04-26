@@ -1,7 +1,7 @@
 # functionality for using and controlling the keysight VNA
-# using pure julia
+# with pure julia
 
-# local 134.61.159.83
+# local 134.61.159.83 (RWTH ws3amadmax02)
 # host (vna) 134.61.12.182
 # port at host 5025
 
@@ -253,7 +253,6 @@ end
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
-
         send(socket,"FORMat:DATA REAL,64\n")
 
         send(socket,"FORMat:BORDer SWAPPed;*OPC?\n")
@@ -335,20 +334,27 @@ function instrumentErrCheck(socket::TCPSocket)
     end
 end
 
-function instrumentSimplifiedSetup(socket::TCPSocket,
-        calName::String,
-        power::Int,
-        center::Float64,
-        span::Float64,
-        sweeppoints::Int,
-        ifbandwidth::Int
+function instrumentSimplifiedSetup(socket::TCPSocket;
+        calName::String = cals[:c3GHz],
+        power::Int = -20,
+        center::Float64 = 20.025e9,
+        span::Float64 = 50e6,
+        sweeppoints::Int = 101,
+        ifbandwidth::Int = Int(5e6),
+        measurement::String = "CH1_S11_1"
     )
 
     setCalibration(socket,calName)
     setPowerLevel(socket,power)
     setAveraging(socket,false)
-    setFrequencies(soket,center,span)
+    setFrequencies(socket,center,span)
     setSweepPoints(socket,sweeppoints)
     setIFBandwidth(socket,ifbandwidth)
     setFormat2Log(socket)
+    setMeasurement(socket; name=measurement)
 end
+
+cals = Dict{Symbol,String}(
+    :c3GHz => "{AAE0FD65-EEA1-4D1A-95EE-06B3FFCB32B7}",
+    :c300MHz => "{AC488992-4AB2-4EB5-9D23-34EF8774902F}"
+)

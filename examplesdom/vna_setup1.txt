@@ -1,0 +1,7 @@
+PWLV    -20
+AVRG    false
+FRQC    20.025e9
+FRQS    50e9
+SWPP    101
+IFBW    5e6
+FMTL    log

@@ -574,11 +574,6 @@ end
 
 
 
-function move()
-    return
-end
-
-
 
 function checkCollision(pos::Vector{<:Real},newpos::Vector{<:Real},)
     return false

@@ -1,4 +1,29 @@
 
+
+
+mutable struct Devices <: DevicesType
+    ids::Vector{DeviceId}
+
+    stagenames::Vector{String}
+    stagecals::Vector{Tuple{Int,Symbol}}
+    stagecolls::Vector{Tuple{Float64,}}
+    stagezeros::Vector{Tuple{Float64,Float64}}
+    stageborders::Vector{Tuple{Float64,Float64}}
+
+    function Devices(ids,stagecals::Dict,stagecolls::Dict,stagezeros::Dict,stageborders::Dict)
+        sn = [getStageName(D[i]) for i in eachindex(D)]
+        scal = [stagecals[getStageName(D[i])] for i in eachindex(D)]
+        sz = [stagezeros[getStageName(D[i])] for i in eachindex(D)]
+        scol = [stagecolls[getStageName(D[i])] for i in eachindex(D)]
+        sb = [stageborders[getStageName(D[i])] for i in eachindex(D)]
+
+
+        new(ids,sn,scal,sz,scol,sb)
+    end
+end
+
+
+
 function commandMove(devices::Devices,x::Vector{<:Real},cal::Dict{String,Tuple{Int,Symbol}}; info=false,inputunit=:mm)
     if length(devices) != length(x)
         error("Amount of values don't match.")
@@ -13,11 +38,11 @@ function commandMove(devices::Devices,x::Vector{<:Real},cal::Dict{String,Tuple{I
     end
 end
 
-function move(booster::Dragoon.PhysicalBooster,newpos::Vector{Float64}; additive=false)
+function move(booster::PhysicalBooster,newpos::Vector{Float64}; additive=false)
     if additive
         checkCollision(booster.pos,booster.pos+newpos) && error("Discs are about to collide!")
         
-        commandMove(devices::Vector{JuXIMC.DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Int,Symbol}}; info=false,inputunit=:mm)
+        commandMove(devices::Vector{DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Int,Symbol}}; info=false,inputunit=:mm)
 
         booster.pos += newpos
         JuXIMC.commandMove(booster.devices.ids,booster.pos,booster.devices.stagecals;
