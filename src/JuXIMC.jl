@@ -428,8 +428,6 @@ function setSpeed(device::DeviceId,speed::Integer; info=false)
 
     mvst.Speed = speed
 
-    println(mvst)
-
     result = setMoveSettings(device,mvst)
 
     info && println("Write command result: "*string(result))
