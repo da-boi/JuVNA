@@ -75,9 +75,13 @@ function calcFieldProportionality(S_perturbed::Vector{Any}, S_unperturbed::Vecto
 end
 
 
+heatmapdata = zeros(Int8, length(rawdata), length(freq))
+#heatmapdata=[][]
 
 for x in rawdata
     push!(heatmapdata, calcFieldProportionality(x,S_unperturbed,freq))
 end
+
+typeof(heatmapdata)
 
 #plot(heatmapdata)
