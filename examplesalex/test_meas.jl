@@ -1,56 +1,62 @@
 # for testing purposes only
 
 using Dragoon
+using JSON
 
-include("vna_control.jl")
+
+include("../src/vna_control.jl")
 #include("stages.jl")
-include("JuXIMC.jl")
+include("../src/JuXIMC.jl")
 include("dataIO.jl")
 
 stagenames = Dict{String, Int}("Big Chungus" => 1, "Monica" => 2, "Alexanderson" => 3, "Bigger Chungus" => 4,)
 stagecals  = Dict{String, Tuple{Symbol,Int}}("Big Chungus" => (:mm,80), "Monica" => (:mm,800), "Alexanderson" => (:mm,800), "Bigger Chungus" => (:mm,80))
 
-JuXIMC.infoXIMC()
+infoXIMC()
 
-JuXIMC.setBindyKey(
+setBindyKey(
     joinpath(
         dirname(@__DIR__),
         "XIMC\\ximc-2.13.6\\ximc\\win64\\keyfile.sqlite"
     )
 )
 
-devcount, devenum, enumnames = JuXIMC.setupDevices(JuXIMC.ENUMERATE_PROBE | JuXIMC.ENUMERATE_NETWORK,b"addr=134.61.12.184")
+devcount, devenum, enumnames = setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,b"addr=134.61.12.184")
 
 # ========================================================================================================================
 
-D = JuXIMC.openDevices(enumnames,stagenames)
-JuXIMC.checkOrdering(D,stagenames)
-# JuXIMC.closeDevice(D[1:3])
+D = openDevices(enumnames,stagenames)
+checkOrdering(D,stagenames)
+# closeDevice(D[1:3])
 # D = D[4]
 
-#JuXIMC.commandMove(D,[20,20,20],stagecals)
-#JuXIMC.commandMove(D,zeros(3),stagecals)
+#commandMove(D,[20,20,20],stagecals)
+#commandMove(D,zeros(3),stagecals)
+
+
 
 f_center::Float64 = 19e9
 f_span::Float64 = 3e9
-sweeppoints::Int = 16384
+sweeppoints::Int = 1024
+ifbandwidth::Int = Int(1e5)
+
 
 vna = connectVNA()
-instrumentSimplifiedSetup(vna, "{AAE0FD65-EEA1-4D1A-95EE-06B3FFCB32B7}", -20, f_center, f_span, sweeppoints, 50000)
+instrumentSimplifiedSetup(vna; calName="{AAE0FD65-EEA1-4D1A-95EE-06B3FFCB32B7}", power=-20, center=f_center, span=f_span, sweeppoints=sweeppoints, ifbandwidth=100000)
 
-JuXIMC.commandMove(D[4],28000,0)
-JuXIMC.command_wait_for_stop(D[4],0x00000a)
-#JuXIMC.commandWaitForStop(D[4])
+commandMove(D[4],28000,0)
+command_wait_for_stop(D[4],0x00000a)
+#commandWaitForStop(D[4])
 
 data = Vector{Vector{Float64}}(undef, 0)
 
 f_data = getFreqAsBinBlockTransfer(vna)
 
 for i in 1:50
-    println(i,", ",JuXIMC.getPos(D[4]))
-    JuXIMC.commandMove(D[4],28000-500*i,0)
-    JuXIMC.command_wait_for_stop(D[4],0x00000a)
-    # JuXIMC.commandWaitForStop(D[4])
+    println(i,", ",getPos(D[4]))
+    commandMove(D[4],28000-500*i,0)
+    command_wait_for_stop(D[4],0x00000a)
+    # commandWaitForStop(D[4])
 
     push!(data,getDataAsBinBlockTransfer(vna))
 
@@ -79,3 +85,6 @@ function calcFieldProportionality(S_perturbed::Vector{Float64}, S_unperturbed::V
 end
 =#
 
+
+
+#closeDevices(D)

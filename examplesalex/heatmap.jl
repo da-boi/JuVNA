@@ -1,8 +1,6 @@
 using Plots
-using CSV
-using DataFrames
-using DelimitedFiles
 using JSON
+
 
 
 #=
@@ -27,14 +25,18 @@ plot!()
 
 =#
 
-plot == 0
+
+#bilder = 0
 
 file = JSON.parsefile("measurement.json")
 freq = file["freq"][:]
 
 rawdata = file["data"][:]
+S_unperturbed = file["data"][1]
 
-if plot == 1
+#=
+if bilder == 1
+    println("MOIN")
     plot()
     for i = 1:50
         plot!(rawdata[i,:])
@@ -42,12 +44,17 @@ if plot == 1
     end
     plot!()
 end
-
+=#
 keys(file)
 length(file["data"])
 
 
-
+plot()
+for i = 1:50
+    plot!(rawdata[i,:])
+    println(i)
+end
+plot!()
 
 
 
@@ -55,7 +62,9 @@ function calcFieldProportionality(S_perturbed::Float64, S_unperturbed::Float64, 
     return Float64(sqrt(abs( (S_perturbed - S_unperturbed) / frequency / 6.28 )))
 end
 
-function calcFieldProportionality(S_perturbed::Vector{Float64}, S_unperturbed::Vector{Float64}, frequency::Vector{Float64})::Vector{Float64}
+
+
+function calcFieldProportionality(S_perturbed::Vector{Any}, S_unperturbed::Vector{Any}, frequency::Vector{Any})::Vector{Any}
     ret = Float64[]
 
     for i in eachindex(frequency)
@@ -65,5 +74,10 @@ function calcFieldProportionality(S_perturbed::Vector{Float64}, S_unperturbed::V
     return ret
 end
 
-calcFieldProportionality
 
+
+for x in rawdata
+    push!(heatmapdata, calcFieldProportionality(x,S_unperturbed,freq))
+end
+
+#plot(heatmapdata)
