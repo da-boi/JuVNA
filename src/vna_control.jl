@@ -18,7 +18,7 @@ function recv(socket::TCPSocket)
     return readavailable(socket)
 end
 
-function recv(socket::TCPSocket,nb::Int)
+function recv(socket::TCPSocket,nb::Integer)
     refreshBuffer(socket)
     return read(socket,nb)
 end
@@ -99,7 +99,7 @@ end
 
 
 
-function setPowerLevel(socket::TCPSocket,power::Int)
+function setPowerLevel(socket::TCPSocket,power::Integer)
     if power > 5
         error("Power threshold reached. Must be less than 5 dBm.")
     end
@@ -159,7 +159,7 @@ function setFrequencies(socket::TCPSocket,center::Float64,span::Float64)
     return
 end
 
-function setSweepPoints(socket::TCPSocket,points::Int)
+function setSweepPoints(socket::TCPSocket, points::Integer)
     if points <= 0
         error("Must use at least one sweep point.")
     end
@@ -171,7 +171,7 @@ function setSweepPoints(socket::TCPSocket,points::Int)
     )
 end
 
-function setIFBandwidth(socket::TCPSocket,bandwidth::Int)
+function setIFBandwidth(socket::TCPSocket, bandwidth::Integer)
     if bandwidth <= 0
         error("Resolution must be greater that 0.")
     end
@@ -183,6 +183,14 @@ function setIFBandwidth(socket::TCPSocket,bandwidth::Int)
     )
 
     return
+end
+
+function setMeasurement(socket::TCPSocket, name::String)
+    write(socket,
+        codeunits(
+            "CALCulate:PARameter:SELect '"*name*"'\n"
+        )
+    )
 end
 
 function setFormat2Log(socket::TCPSocket)
@@ -253,7 +261,6 @@ Core.Int(data::Array{UInt8}) = parse(Int, String(data))
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
-        send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n") # Select the Channel and Measurement Parameter S11
         send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
         send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
         send(socket,"SENSe:SWEep:SPEed FAST\n")  # Set the sweep speed to fast
@@ -386,7 +393,7 @@ function instrumentSimplifiedSetup(socket::TCPSocket;
     setSweepPoints(socket,sweeppoints)
     setIFBandwidth(socket,ifbandwidth)
     setFormat2Log(socket)
-    setMeasurement(socket; name=measurement)
+    setMeasurement(socket, measurement)
 end
 
 cals = Dict{Symbol,String}(

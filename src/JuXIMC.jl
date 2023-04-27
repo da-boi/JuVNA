@@ -49,7 +49,7 @@ function getStageName(device::DeviceId; returnstruct::Bool=false)
     return String(name.PositionerName)
 end
 
-function getStageNameEnumerate(devenum::Ptr{DeviceEnumeration},idx::Int)
+function getStageNameEnumerate(devenum::Ptr{DeviceEnumeration},idx::Integer)
     name = stage_name_t()
 
     result = get_enumerate_device_stage_name(devenum,idx-1,name)
@@ -315,7 +315,7 @@ function getDeviceCount(devenum::Ptr{DeviceEnumeration}; info=false)
     return count
 end
 
-function getDeviceName(devenum::Ptr{DeviceEnumeration},ind::Int)
+function getDeviceName(devenum::Ptr{DeviceEnumeration},ind::Integer)
     get_device_name(devenum,ind-1)
 end
 
@@ -419,7 +419,7 @@ function setMoveSettings(device::DeviceId,mvst::MoveSettings)
     return result
 end
 
-function setSpeed(device::DeviceId,speed::Int; info=false)
+function setSpeed(device::DeviceId,speed::Integer; info=false)
     info && println("\nSet speed")
 
     mvst = getMoveSettings(device)
