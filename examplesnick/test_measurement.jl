@@ -1,6 +1,6 @@
 include("../src/vna_control.jl")
 include("../examplesdom/stages.jl")
-include("dataIO.jl")
+include("binaryIO.jl")
 include("measurement.jl")
 
 
@@ -21,13 +21,15 @@ sweeppoints::Integer = 1024
 ifbandwidth::Integer = 100e3
 
 vna = connectVNA()
-instrumentSimplifiedSetup(vna; power=power, center=f_center, span=f_span, sweeppoints=sweeppoints, ifbandwidth=ifbandwidth)
-getDataAsBinBlockTransfer(vna)
-
+vnaParam = instrumentSimplifiedSetup(vna; power=power, center=f_center, span=f_span, sweeppoints=sweeppoints, ifbandwidth=ifbandwidth)
 
 ### Measurement ###
 startPos = 5000
 endPos = 28000
 
-@time getContinousMeasurement(startPos, endPos; speed=1000)
-@time getSteppedMeasurement(startPos, endPos)
+S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
+
+saveMeasurement(Measurement(vnaParam, f_data, S_data); filename="test.data")
+
+#@time S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
+#@time getSteppedMeasurement(startPos, endPos)

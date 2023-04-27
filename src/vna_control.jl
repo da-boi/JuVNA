@@ -394,9 +394,29 @@ function instrumentSimplifiedSetup(socket::TCPSocket;
     setIFBandwidth(socket,ifbandwidth)
     setFormat2Log(socket)
     setMeasurement(socket, measurement)
+
+    return VNAParameters(
+        calName,
+        power,
+        center,
+        span,
+        sweeppoints,
+        ifbandwidth,
+        measurement
+    )
 end
 
 cals = Dict{Symbol,String}(
     :c3GHz => "{AAE0FD65-EEA1-4D1A-95EE-06B3FFCB32B7}",
     :c300MHz => "{AC488992-4AB2-4EB5-9D23-34EF8774902F}"
 )
+
+struct VNAParameters
+    calName::String
+    power::Integer
+    center::Float64
+    span::Float64
+    sweeppoints::Integer
+    ifbandwidth::Integer
+    measurement::String
+end
