@@ -23,7 +23,6 @@ function recv(socket::TCPSocket,nb::Int)
     return read(socket,nb)
 end
 
-
 function async_reader(io::IO, timeout_sec)::Channel
     ch = Channel(1)
     task = @async begin
@@ -254,10 +253,10 @@ Core.Int(data::Array{UInt8}) = parse(Int, String(data))
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
-
         send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n") # Select the Channel and Measurement Parameter S11
         send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
         send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket,"SENSe:SWEep:SPEed FAST\n")  # Set the sweep speed to fast
         send(socket,"SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
         send(socket,"CALCulate:DATA? FDATA\n") # Read the S11 parameter Data
         # Returns
@@ -274,12 +273,9 @@ function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
 
         numofbytes = Int(recv(socket, numofdigitstoread))
 
-        data = Array{Float64}(undef,Int(Int(numofbytes)/8))
+        bytes = recv(socket, numofbytes)
 
-        for i in 1:Int(Int(numofbytes)/8)
-            x = recv(socket,8)
-            data[i] = reinterpret(Float64, x)[begin]
-        end
+        data = reinterpret(Float64, bytes)
 
         hanginglinefeed = recv(socket,1)
         if hanginglinefeed[begin] != 0x0A
@@ -289,6 +285,10 @@ function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
         sleep(waittime)
 
         send(socket,"FORMat:DATA ASCii,0;*OPC?\n") # Set the return type back to ASCII
+
+        recv(socket)
+
+        #send(socket,"SENSe:SWEep:TIME?\n") # Set the return type back to ASCII
 
         return data
     catch e
@@ -318,12 +318,9 @@ function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
 
         numofbytes = Int(recv(socket, numofdigitstoread))
 
-        data = Array{Float64}(undef,Int(Int(numofbytes)/8))
+        bytes = recv(socket, numofbytes)
 
-        for i in 1:Int(Int(numofbytes)/8)
-            x = recv(socket,8)
-            data[i] = reinterpret(Float64, x)[begin]
-        end
+        data = reinterpret(Float64, bytes)
 
         hanginglinefeed = recv(socket,1)
         if hanginglinefeed[begin] != 0x0A
