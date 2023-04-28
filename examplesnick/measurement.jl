@@ -76,8 +76,7 @@ function getSteppedMeasurement(startPos::Integer, endPos::Integer; stepSize::Int
         commandMove(D, x, 0)
         commandWaitForStop(D)
         push!(S_data, getDataAsBinBlockTransfer(vna))
-        push!(pos_data, Position(x, 0, 0))
-        println(currentPos)
+        push!(pos_data, Position(x, 0))
     end
 
     # Reform the data to a Matrix{Float64}

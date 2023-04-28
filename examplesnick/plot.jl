@@ -3,14 +3,16 @@ using Plots
 include("analysis.jl")
 include("binaryIO.jl")
 
-meas::Measurement = readMeasurement("test.data")
+meas::Measurement = readMeasurement("cont.data")
 
 E = calcFieldProportionality(meas.data, meas.freq)
 
-E = Matrix{Float64}([1 2; 2 0])
+#E = Matrix{Float64}([1 2; 2 0])
+
+E = meas.data
 
 gr()
-heatmap(1:size(E,1), 1:size(E,2), E,
+heatmap(1:size(E,2), meas.freq, transpose(E),
     c=cgrad([:blue, :white,:red, :yellow]),
-    xlabel="x in 500 Steps", ylabel="f in GHz", title="Feldstärke"
+    xlabel="x", ylabel="f", title="Feldstärke"
 )

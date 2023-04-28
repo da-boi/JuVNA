@@ -27,9 +27,10 @@ vnaParam = instrumentSimplifiedSetup(vna; power=power, center=f_center, span=f_s
 startPos = 5000
 endPos = 28000
 
+S_data, f_data, pos_data = getSteppedMeasurement(startPos, endPos; speed=1000)
 S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
 
-saveMeasurement(Measurement(vnaParam, f_data, S_data); filename="test.data")
+saveMeasurement(Measurement(vnaParam, f_data, S_data); filename="stepped.data")
 
 #@time S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
 #@time getSteppedMeasurement(startPos, endPos)
