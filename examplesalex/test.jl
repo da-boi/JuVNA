@@ -10,6 +10,14 @@ include("vna_control.jl")
 include("JuXIMC.jl")
 #include("stages.jl")
 
+
+
+function saveS2P(fileURL)
+    instrumentDirectSocket.sendall(b"MMEMory:STORe '" + bytes(fileURL,encoding="utf8") + b"'\n")
+    return true
+end
+
+
 stagenames = Dict{String, Int}("Big Chungus" => 1, "Monica" => 2, "Alexanderson" => 3, "Bigger Chungus" => 4,)
 stagecals  = Dict{String, Tuple{Symbol,Int}}("Big Chungus" => (:mm,80), "Monica" => (:mm,800), "Alexanderson" => (:mm,800), "Bigger Chungus" => (:mm,80))
 
