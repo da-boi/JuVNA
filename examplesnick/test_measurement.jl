@@ -14,14 +14,14 @@ D = D[4]
 
 
 ### Connect to the VNA ###
-power=-20
+power=-10
 f_center::Float64 = 19e9
-f_span::Float64 = 3e9
+f_span::Float64 = 300e6
 sweeppoints::Integer = 1024
 ifbandwidth::Integer = 100e3
 
 vna = connectVNA()
-vnaParam = instrumentSimplifiedSetup(vna; power=power, center=f_center, span=f_span, sweeppoints=sweeppoints, ifbandwidth=ifbandwidth)
+vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c300MHz], power=power, center=f_center, span=f_span, sweeppoints=sweeppoints, ifbandwidth=ifbandwidth)
 
 ### Measurement ###
 startPos = 5000
@@ -30,7 +30,7 @@ endPos = 28000
 S_data, f_data, pos_data = getSteppedMeasurement(startPos, endPos; speed=1000)
 S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
 
-saveMeasurement(Measurement(vnaParam, f_data, S_data); filename="stepped.data")
+saveMeasurement(Measurement(vnaParam, f_data, S_data); filename="continous_zahnseide_300MHz.data")
 
 #@time S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
 #@time getSteppedMeasurement(startPos, endPos)
