@@ -3,7 +3,7 @@ function calcFieldProportionality(S_perturbed::Float64, S_unperturbed::Float64, 
 end
 
 function calcFieldProportionality(S_perturbed::Vector{Float64}, S_unperturbed::Vector{Float64}, frequency::Vector{Float64})
-    ret = Vector{Float64}(undefined)
+    ret = Vector{Float64}(undef, 0)
 
     for i in eachindex(frequency)
         push!(ret, calcFieldProportionality(S_perturbed[i], S_unperturbed[i], frequency[i]))
@@ -12,8 +12,9 @@ function calcFieldProportionality(S_perturbed::Vector{Float64}, S_unperturbed::V
     return ret
 end
 
+#=
 function calcFieldProportionality(S_perturbed::Matrix{Float64}, S_unperturbed::Vector{Float64}, frequency::Vector{Float64})
-    ret = Matrix{Float64}(undefined)
+    ret = Matrix{Float64}(undef, 0)
 
     for S in S_perturbed
         push!(ret, calcFieldProportionality(S, S_unperturbed, frequency))
@@ -21,13 +22,14 @@ function calcFieldProportionality(S_perturbed::Matrix{Float64}, S_unperturbed::V
 
     return ret
 end
+=#
 
 function calcFieldProportionality(S_perturbed::Matrix{Float64}, frequency::Vector{Float64})
-    ret = Matrix{Float64}(undefined)
+    ret = Vector{Vector{Float64}}(undef, 0)
 
-    for S in S_perturbed
-        push!(ret, calcFieldProportionality(S, S_perturbed[begin], frequency))
+    for S in eachcol(S_perturbed)
+        push!(ret, calcFieldProportionality(Vector(S), S_perturbed[:,begin], frequency))
     end
 
-    return ret
+    return Matrix(reduce(hcat, ret))
 end
