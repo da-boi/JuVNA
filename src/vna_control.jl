@@ -257,6 +257,12 @@ function saveS2P(socket::TCPSocket,fileURL::String)
     )
 end
 
+function getSweepTime(socket::TCPSocket)
+    send(socket, "SENSe:SWEep:TIME?\n")
+    bytes = recv(socket, 8)
+    return reinterpret(Float64, bytes)
+end
+
 Core.Int(data::Array{UInt8}) = parse(Int, String(data))
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)

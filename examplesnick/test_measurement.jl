@@ -2,6 +2,7 @@ include("../src/vna_control.jl")
 include("../examplesdom/stages.jl")
 include("binaryIO.jl")
 include("measurement.jl")
+include("plot.jl")
 
 
 ### Connect to the Motor "Bigger Chungus" ###
@@ -27,10 +28,11 @@ vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c300MHz], power=power, c
 startPos = 5000
 endPos = 28000
 
-S_data, f_data, pos_data = getSteppedMeasurement(startPos, endPos; speed=1000)
-S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
+@time S_data, f_data, pos_data, posSet_data = getSteppedMeasurement(startPos, endPos; speed=1000)
+@time S_data, f_data, pos_data, posSet_data = getContinousMeasurement(startPos, endPos; speed=1000)
 
-saveMeasurement(Measurement(vnaParam, f_data, S_data); filename="continous_zahnseide_300MHz.data")
+meas = Measurement(vnaParam, f_data, S_data)
+saveMeasurement(meas; filename="continous_zahnseide_300MHz.data")
 
-#@time S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
-#@time getSteppedMeasurement(startPos, endPos)
+plotGaussianFit(meas; xIntervall=(0, 165))
+plotHeatmap(meas)
