@@ -9,7 +9,7 @@ struct Measurement
     freq::Vector{Float64}
     #pos::Vector{Position}
     #posSet::Vector{Position}
-    data::Matrix{Float64}
+    data::Matrix{ComplexF64}
 end
 
 # Saves a Measurement struct in a binary file

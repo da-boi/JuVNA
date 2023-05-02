@@ -1,6 +1,6 @@
 include("../src/JuXIMC.jl")
 
-function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::Integer=250)
+function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::Integer=500)
     if startPos <= endPos
         return Vector{Integer}(startPos:stepSize:endPos)
     else
@@ -9,7 +9,7 @@ function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::I
 end
 
 function getContinousMeasurement(startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
-    S_data = Vector{Vector{Float64}}(undef, 0)
+    S_data = Vector{Vector{ComplexF64}}(undef, 0)
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(vna)
 
@@ -44,7 +44,7 @@ function getContinousMeasurement(startPos::Integer, endPos::Integer; stepSize::I
             push!(pos_data, currentPos)
             println(currentPos)
             current += 1
-            if currentMeasPosIndex == length(posSet) + 1 break end
+            if currentPos == length(posSet) + 1 break end
         end
 
         # Redundant check if the end has been reached, in case a measurement position lies
@@ -59,7 +59,7 @@ function getContinousMeasurement(startPos::Integer, endPos::Integer; stepSize::I
 end
 
 function getSteppedMeasurement(startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000)
-    S_data = Vector{Vector{Float64}}(undef, 0)
+    S_data = Vector{Vector{ComplexF64}}(undef, 0)
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(vna)
 

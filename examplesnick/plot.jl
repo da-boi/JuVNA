@@ -78,7 +78,7 @@ function plotGaussianFit(meas::Measurement; xIntervall::Tuple{Real, Real}=(0, 0)
     # with p0 beeing an initial guess for the coefficients
     @. gaussian(p, t) = p[1] + p[2]*exp(-(t-p[3])^2 / (2*p[4]^2))
     @. dGaussian(p, t) = -p[2]/p[4]*abs(t-p[3])*exp(-(t-p[3])^2 / (2*p[4]^2))
-    p0 = [1.0, 1.0, 110, 10,]
+    p0 = [1.0, 1.0, 180, 10,]
 
     # fitting
     model = SciPy.odr.Model(gaussian)
@@ -131,5 +131,3 @@ function plotGaussianFit(meas::Measurement; xIntervall::Tuple{Real, Real}=(0, 0)
     return (p, pErr, chiq, ndof)
 
 end
-
-plotGaussianFit(measS; xIntervall=(0, 165))
