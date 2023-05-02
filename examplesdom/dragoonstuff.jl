@@ -64,14 +64,25 @@ function pos2steps(booster::PhysicalBooster; inputunit=:m)
     return s
 end
 
-function pos2steps(booster::PhysicalBooster; inputunit=:m)
-    return @. pos2steps(booster.pos,booster.devices.stagecals,
-        booster.devices.stagezeros; inputunit=inputunit)
+function pos2steps(pos::Vector{Float64},booster::PhysicalBooster; inputunit=:m)
+    s = Array{Int}(undef,booster.ndisk)
+
+    for i in 1:booster.ndisk
+        s[i] = pos2steps(pos[i],booster.devices.stagecals[i],
+            booster.devices.stagezeros[i]; inputunit=inputunit)
+    end
+
+    return s
 end
 
+# function pos2steps(booster::PhysicalBooster; inputunit=:m)
+#     return @. pos2steps(booster.pos,booster.devices.stagecals,
+#         booster.devices.stagezeros; inputunit=inputunit)
+# end
 
 
-function steps2pos(steps::Int,
+
+function steps2pos(steps::Tuple{Int,Int},
         stagecal::Tuple{Symbol,Float64},
         stagezero::Tuple{Symbol,Float64},;
         outputunit=:m)
@@ -80,7 +91,25 @@ function steps2pos(steps::Int,
         stagezero[2]*stagezero[1]/outputunit
 end
 
+function steps2pos(steps::Vector{Tuple{Int,Int}},booster::PhysicalBooster;
+        outputunit=:m)
+    
+    p = Array{Int}(undef,booster.ndisk)
 
+    for i in 1:booster.ndisk
+        p[i] = steps2pos(steps[i],booster.devices.stagecals[i],
+            booster.devices.stagezeros[i]; outputunit=outputunit)
+    end
+
+    return p
+end
+
+# function steps2pos(steps::Vector{Tuple{Int,Int}},booster::PhysicalBooster;
+#         outputunit=:m)
+
+#     return @. steps2pos(steps,booster.devices.stagecals,
+#         booster.devices.stagezeros; outputunit=outputunit)
+# end
 
 
 function checkCollision(pos::Vector{Float64},
@@ -127,9 +156,8 @@ function move(booster::PhysicalBooster,newpos::Vector{Float64}; additive=false)
     if additive
         checkCollision(booster.pos+newpos,booster) && error("Discs are about to collide!")
         
-        commandMove(devices::Vector{DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Int,Symbol}}; info=false,inputunit=:mm)
-
         booster.pos += newpos
+
         commandMove(booster.devices.ids,booster.pos,booster.devices.stagecals;
             inputunit=:m)
         commandWaitForStop(booster.devices.id)
