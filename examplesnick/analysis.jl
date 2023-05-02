@@ -1,10 +1,10 @@
 include("binaryIO.jl")
 
-function calcFieldProportionality(S_perturbed::Float64, S_unperturbed::Float64, frequency::Float64)
-    return Float64(sqrt(abs( (S_perturbed - S_unperturbed) / frequency )))
+function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::ComplexF64, frequency::Float64)
+    return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency ))
 end
 
-function calcFieldProportionality(S_pertubed::Vector{Float64}, S_unperturbed::Float64, frequency::Float64)
+function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
     ret = Vector{Float64}(undef, 0)
 
     for S in S_pertubed
@@ -14,7 +14,7 @@ function calcFieldProportionality(S_pertubed::Vector{Float64}, S_unperturbed::Fl
     return ret
 end
 
-function calcFieldProportionality(S_perturbed::Vector{Float64}, frequency::Float64)
+function calcFieldProportionality(S_perturbed::Vector{ComplexF64}, frequency::Float64)
     ret = Vector{Float64}(undef, 0)
 
     for S in S_perturbed
@@ -24,7 +24,7 @@ function calcFieldProportionality(S_perturbed::Vector{Float64}, frequency::Float
     return ret
 end
 
-function calcFieldProportionality(S_perturbed::Matrix{Float64}, frequency::Vector{Float64})
+function calcFieldProportionality(S_perturbed::Matrix{ComplexF64}, frequency::Vector{Float64})
     ret = Vector{Vector{Float64}}(undef, 0)
 
     for i in eachindex(frequency)
