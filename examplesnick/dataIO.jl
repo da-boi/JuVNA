@@ -9,12 +9,6 @@ struct VnaParameters
     ifbandwidth::Int
 end
 
-struct Measurement
-    param::VnaParameters
-    freq::Vector{Float64}
-    data::Matrix{Float64}
-end
-
 function saveMeasurement(data::Measurement, file::String)
     stringdata = JSON.json(data, 4)
 

@@ -23,6 +23,13 @@ function recv(socket::TCPSocket,nb::Integer)
     return read(socket,nb)
 end
 
+function clear(socket::TCPSocket)
+    refreshBuffer(socket)
+    if getBufferSize(socket) != 0
+        recv(socket)
+    end
+end
+
 function async_reader(io::IO, timeout_sec)::Channel
     ch = Channel(1)
     task = @async begin
@@ -258,14 +265,15 @@ function saveS2P(socket::TCPSocket,fileURL::String)
 end
 
 function getSweepTime(socket::TCPSocket)
+    clear(socket)
     send(socket, "SENSe:SWEep:TIME?\n")
-    bytes = recv(socket, 8)
-    return reinterpret(Float64, bytes)
+    bytes = recv(socket)
+    return Float64(bytes)
 end
 
-import Core: Int
+Core.Int(data::Array{UInt8}) = parse(Int, String(data))
+Core.Float64(data::Array{UInt8}) = parse(Float64, String(data))
 
-Int(data::Array{UInt8}) = parse(Int, String(data))
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
@@ -337,16 +345,16 @@ function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     end
 end
 
-function deleteTraces(socket::TCPSocket)
-    send(socket,"CALCulate:PARameter:DELete:ALL")
-    send(socket, "CALCulate1:PARameter:DEFine:EXTended 'CH1_S11_1','S11'\n")
-    send(socket, "DISPlay:WINDow:TRACe1:FEED 'CH1_S11_1'")
+function deleteTrace(socket::TCPSocket, mnum::Integer)
+    send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n")
 end
 
-
-function setFastMeasurementMode(socket::TCPSocket)
-    send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-    send(socket,"SENSe:SWEep:SPEed FAST\n")  # Set the sweep speed to fast
+function setFastSweep(socket::TCPSocket, fast::Bool)
+    if fast
+        send(socket,"SENSe:SWEep:SPEed FAST\n")
+    else
+        send(socket,"SENSe:SWEep:SPEed NORMal\n")
+    end
 end
 
 function storeTraceInMemory(socket::TCPSocket, mnum::Integer)
@@ -356,33 +364,35 @@ function storeTraceInMemory(socket::TCPSocket, mnum::Integer)
     send(socket, "CALCulate1:MATH:MEMorize;*OPC?\n")
 end
 
-function getTraceFromMemory(socket::TCPSocket, mnum::Integer)
+function getTraceFromMemory(socket::TCPSocket, mnum::Integer; delete=true)
     send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
     send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
     send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
     send(socket,"CALCulate1:DATA? SMEM\n") # Read the S11 parameter Data
-        # Returns
-        # 1 Byte: Block Data Delimiter '#'
-        # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
-        # n Bytes: N := number of data bytes to read in ASCII
-        # N Bytes: data
-        # 1 Byte: End of line character 0x0A to indicate the end of the data block
+    # Returns
+    # 1 Byte: Block Data Delimiter '#'
+    # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
+    # n Bytes: N := number of data bytes to read in ASCII
+    # N Bytes: data
+    # 1 Byte: End of line character 0x0A to indicate the end of the data block
 
-        # Wait for the Block Data Delimiter '#'
-        while recv(socket,1)[begin] != 0x23 end
+    # Wait for the Block Data Delimiter '#'
+    while recv(socket,1)[begin] != 0x23 end
 
-        numofdigitstoread = Int(recv(socket,1))
+    numofdigitstoread = Int(recv(socket,1))
 
-        numofbytes = Int(recv(socket, numofdigitstoread))
+    numofbytes = Int(recv(socket, numofdigitstoread))
 
-        bytes = recv(socket, numofbytes)
+    bytes = recv(socket, numofbytes)
 
-        data = reinterpret(Float64, bytes)
+    data = reinterpret(Float64, bytes)
 
-        hanginglinefeed = recv(socket,1)
-        if hanginglinefeed[begin] != 0x0A
-            error("End of Line Character expected to indicate end of data block")
-        end
+    hanginglinefeed = recv(socket,1)
+    if hanginglinefeed[begin] != 0x0A
+        error("End of Line Character expected to indicate end of data block")
+    end
+
+    if delete send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n") end
 
     return Vector(data)
 end
@@ -468,28 +478,31 @@ function instrumentSimplifiedSetup(socket::TCPSocket;
         power::Int = -20,
         center::Float64 = 20.025e9,
         span::Float64 = 50e6,
-        sweeppoints::Int = 101,
         ifbandwidth::Int = Int(5e6),
-        measurement::String = "CH1_S11_1"
+        sweepPoints::Int = 101,
+        fastSweep::Bool = true
     )
 
     setCalibration(socket,calName)
     setPowerLevel(socket,power)
     setAveraging(socket,false)
     setFrequencies(socket,center,span)
-    setSweepPoints(socket,sweeppoints)
+    setSweepPoints(socket,sweepPoints)
     setIFBandwidth(socket,ifbandwidth)
     setFormat2Log(socket)
     setMeasurement(socket, measurement)
+    setFastSweep(socket, true)
+    sweepTime = getSweepTime(socket)
 
     return VNAParameters(
         calName,
         power,
         center,
         span,
-        sweeppoints,
         ifbandwidth,
-        measurement
+        sweepPoints,
+        sweepTime,
+        fastSweep
     )
 end
 
@@ -503,7 +516,8 @@ struct VNAParameters
     power::Integer
     center::Float64
     span::Float64
-    sweeppoints::Integer
     ifbandwidth::Integer
-    measurement::String
+    sweepPoints::Integer
+    sweepTime::Float64
+    fastSweep::Bool
 end
