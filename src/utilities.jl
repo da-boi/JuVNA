@@ -45,11 +45,11 @@ Units = Dict{Symbol,Float64}(
 function x2steps(
         x::Real;        # input (in unit inputunit, duh)
         inputunit::Symbol=:mm,
-        cal::Tuple{Real,Symbol}=(40,:mm),   # how many steps equal 1 inputunit
+        cal::Tuple{Symbol,Real}=(:mm,40),   # how many steps equal 1 inputunit
         microstepmode::MicrostepMode=MICROSTEP_MODE_FRAC_256,
     )
 
-    s = x*inputunit*cal[1]/cal[2]
+    s = x*inputunit*cal[2]/cal[1]
     µs = trunc(Int,2^(Int(microstepmode)-1)*(s%1))
     
     if 0 <= µs < 2^(microstepmode-1)
@@ -64,11 +64,11 @@ const x2s = x2steps
 function steps2x(
         pos::Tuple{Int,Int};
         outputunit::Symbol=:m,
-        cal::Tuple{Real,Symbol}=(40,:mm),
+        cal::Tuple{Symbol,Real}=(:mm,40),
         microstepmode::MicrostepMode=MICROSTEP_MODE_FRAC_256
     )
     
-    return (pos[1]+pos[2]/(2^(microstepmode-1)))*cal[2]/cal[1]/outputunit
+    return (pos[1]+pos[2]/(2^(microstepmode-1)))*cal[1]/cal[2]/outputunit
 end
 
 const s2x = steps2x

@@ -227,7 +227,7 @@ function commandMove(devices::Vector{DeviceId},positions::Matrix{Int32}; info=fa
     end
 end
 
-function commandMove(device::DeviceId,x::Real,cal::Dict{String,Tuple{Int,Symbol}}; info=false,inputunit=:mm)
+function commandMove(device::DeviceId,x::Real,cal::Dict{String,Tuple{Symbol,Int}}; info=false,inputunit=:mm)
     p = x2steps(x; inputunit=inputunit,cal=cal[getStageName(device)])
 
     info && println("\n Going to $x$inputunit = $(p[1]), $(p[2])")
@@ -239,7 +239,7 @@ function commandMove(device::DeviceId,x::Real,cal::Dict{String,Tuple{Int,Symbol}
     return result
 end
 
-function commandMove(devices::Vector{DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Int,Symbol}}; info=false,inputunit=:mm)
+function commandMove(devices::Vector{DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Symbol,Int}}; info=false,inputunit=:mm)
     if length(devices) != length(x)
         error("Amount of values don't match.")
     end

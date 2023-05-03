@@ -16,7 +16,9 @@ devcount, devenum, enumnames = setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
 
-commandMove(D,[20,20,20],stagecals)
+D = D[1:2]
+
+commandMove(D,[20,20],stagecals)
 commandMove(D,zeros(3),stagecals)
 
 vna = connectVNA()
