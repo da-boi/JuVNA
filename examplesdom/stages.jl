@@ -16,7 +16,6 @@ stagecals = Dict{String,Tuple{Symbol,Int}}(
     "Bigger Chungus" => (:mm,80),
 )
 
-
 # (unit, left side boundary, right side boundary)
 stagecols = Dict{String,Tuple{Symbol,Int,Int}}(
     "Big Chungus" => (:mm,-10,10),
@@ -24,7 +23,6 @@ stagecols = Dict{String,Tuple{Symbol,Int,Int}}(
     "Alexanderson" => (:mm,-10,10),
     "Bigger Chungus" => (:mm,-10,10),
 )
-
 
 # (unit, distance to zero point)
 stagezeros = Dict{String,Tuple{Symbol,Float64}}(
