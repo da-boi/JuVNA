@@ -336,9 +336,9 @@ function openDevices(enumnames::Vector{Cstring},stagenames::Dict{String,Int})
 end
 
 function checkOrdering(devices::Vector{DeviceId},stagenames::Dict{String,Int})
-    if length(devices) != length(stagenames)
-        error("Unequal amounts of values.")
-    end
+    # if length(devices) != length(stagenames)
+    #     error("Unequal amounts of values.")
+    # end
 
     @printf "%3s | %-17s\n" "D" "Stage names"
     for i in eachindex(devices)

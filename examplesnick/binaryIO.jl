@@ -5,11 +5,12 @@ include("../src/JuXIMC.jl")
 include("../src/vna_control.jl")
 
 struct Measurement
+    label::String
     param::VNAParameters
     freq::Vector{Float64}
-    #pos::Vector{Position}
-    #posSet::Vector{Position}
     data::Matrix{ComplexF64}
+    pos::Vector{Position}
+    posSet::Vector{Integer}
 end
 
 # Saves a Measurement struct in a binary file
@@ -19,7 +20,7 @@ end
 function saveMeasurement(data::Measurement; filename::String="", name::String="unnamed", dir::String="")
     if filename == ""
         date = Dates.format(Dates.now(), "yyyy-mm-dd HH:MM:SS")
-        filename = dir * "/" * name * " " * date * ".data"
+        filename = dir * name * " " * date * ".data"
     end
 
     file = open(filename, "w")
