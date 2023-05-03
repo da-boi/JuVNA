@@ -62,13 +62,24 @@ end
 const x2s = x2steps
 
 function steps2x(
-        pos::Tuple{Int,Int};
+        pos::Tuple{Integer,Integer};
         outputunit::Symbol=:m,
         cal::Tuple{Symbol,Real}=(:mm,40),
         microstepmode::MicrostepMode=MICROSTEP_MODE_FRAC_256
     )
     
     return (pos[1]+pos[2]/(2^(microstepmode-1)))*cal[1]/cal[2]/outputunit
+end
+
+function steps2x(
+        pos::Integer,
+        upos::Integer;
+        outputunit::Symbol=:m,
+        cal::Tuple{Symbol,Real}=(:mm,40),
+        microstepmode::MicrostepMode=MICROSTEP_MODE_FRAC_256
+    )
+
+    return (pos+upos/(2^(microstepmode-1)))*cal[1]/cal[2]/outputunit
 end
 
 const s2x = steps2x

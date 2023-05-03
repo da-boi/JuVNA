@@ -263,7 +263,9 @@ function getSweepTime(socket::TCPSocket)
     return reinterpret(Float64, bytes)
 end
 
-Core.Int(data::Array{UInt8}) = parse(Int, String(data))
+import Core: Int
+
+Int(data::Array{UInt8}) = parse(Int, String(data))
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
