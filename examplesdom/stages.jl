@@ -9,7 +9,7 @@ stagenames = Dict{String,Int}(
 )
 
 # (unit, steps per unit)
-stagecals = Dict{String,Tuple{Symbol,Int}}(
+stagecals = Dict{String,Tuple{Symbol,Float64}}(
     "Big Chungus" => (:mm,80),
     "Monica" => (:mm,800),
     "Alexanderson" => (:mm,800),
@@ -17,7 +17,7 @@ stagecals = Dict{String,Tuple{Symbol,Int}}(
 )
 
 # (unit, left side boundary, right side boundary)
-stagecols = Dict{String,Tuple{Symbol,Int,Int}}(
+stagecols = Dict{String,Tuple{Symbol,Float64,Float64}}(
     "Big Chungus" => (:mm,-10,10),
     "Monica" => (:mm,-10,10),
     "Alexanderson" => (:mm,-10,10),
@@ -26,10 +26,10 @@ stagecols = Dict{String,Tuple{Symbol,Int,Int}}(
 
 # (unit, distance to zero point)
 stagezeros = Dict{String,Tuple{Symbol,Float64}}(
-    "Big Chungus" => (:mm,0,),
-    "Monica" => (:mm,0,),
-    "Alexanderson" => (:mm,0,),
-    "Bigger Chungus" => (:mm,0,),
+    "Big Chungus" => (:mm,0),
+    "Monica" => (:mm,0),
+    "Alexanderson" => (:mm,0),
+    "Bigger Chungus" => (:mm,0),
 )
 
 # (unit, left border, right border)

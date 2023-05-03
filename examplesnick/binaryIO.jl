@@ -1,10 +1,15 @@
 import Dates
 import Serialization
 
+include("../src/JuXIMC.jl")
+include("../src/vna_control.jl")
+
 struct Measurement
     param::VNAParameters
     freq::Vector{Float64}
-    data::Matrix{Float64}
+    #pos::Vector{Position}
+    #posSet::Vector{Position}
+    data::Matrix{ComplexF64}
 end
 
 # Saves a Measurement struct in a binary file
@@ -14,7 +19,7 @@ end
 function saveMeasurement(data::Measurement; filename::String="", name::String="unnamed", dir::String="")
     if filename == ""
         date = Dates.format(Dates.now(), "yyyy-mm-dd HH:MM:SS")
-        filename = dir * "/" * name * " " * date *".data"
+        filename = dir * "/" * name * " " * date * ".data"
     end
 
     file = open(filename, "w")

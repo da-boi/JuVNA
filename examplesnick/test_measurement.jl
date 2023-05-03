@@ -2,6 +2,7 @@ include("../src/vna_control.jl")
 include("../examplesdom/stages.jl")
 include("binaryIO.jl")
 include("measurement.jl")
+include("plot.jl")
 
 
 ### Connect to the Motor "Bigger Chungus" ###
@@ -16,21 +17,23 @@ D = D[4]
 ### Connect to the VNA ###
 power=-20
 f_center::Float64 = 19e9
-f_span::Float64 = 3e9
-sweeppoints::Integer = 1024
+f_span::Float64 = 300e6
+sweeppoints::Integer = 10
 ifbandwidth::Integer = 100e3
+measurement::String = "CH1_S11_1"
 
 vna = connectVNA()
-vnaParam = instrumentSimplifiedSetup(vna; power=power, center=f_center, span=f_span, sweeppoints=sweeppoints, ifbandwidth=ifbandwidth)
+vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c300MHz], power=power, center=f_center, span=f_span, sweeppoints=sweeppoints, ifbandwidth=ifbandwidth, measurement=measurement)
 
 ### Measurement ###
-startPos = 5000
+startPos = 0
 endPos = 28000
 
-S_data, f_data, pos_data = getSteppedMeasurement(startPos, endPos; speed=1000)
-S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
+@time S_data, f_data, pos_data, posSet_data = getSteppedMeasurement(startPos, endPos; speed=1000)
+@time S_data, f_data, pos_data, posSet_data = getContinousMeasurement(startPos, endPos; speed=500)
 
-saveMeasurement(Measurement(vnaParam, f_data, S_data); filename="stepped.data")
+meas = Measurement(vnaParam, f_data, S_data)
+saveMeasurement(meas; filename="continous_zahnseide_300MHz.data")
 
-#@time S_data, f_data, pos_data = getContinousMeasurement(startPos, endPos; speed=1000)
-#@time getSteppedMeasurement(startPos, endPos)
+plotGaussianFit(meas)
+plotHeatmap(meas)

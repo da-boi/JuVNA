@@ -77,13 +77,17 @@ end
 
 heatmapdata = zeros(Int64, length(rawdata), length(freq))
 
-testmatrix = [[rawdata[1][1],rawdata[2][1]]  [rawdata[1][2],rawdata[2][2]] [rawdata[1][3],rawdata[2][3]]]
+# testmatrix = [[rawdata[1][1],rawdata[2][1]]  [rawdata[1][2],rawdata[2][2]] [rawdata[1][3],rawdata[2][3]]]
+testmatrix = hcat(rawdata...)
+
+filename = "newfileData.txt" 
+file = open(filename, "w")  
+writedlm(file, testmatrix, ',')
+close(file)
+
+testmatrix
 
 
-rawdata[1][1000]
-
-
-
-typeof(rawdata)
+heatmap(testmatrix)
 
 #plot(heatmapdata)
