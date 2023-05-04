@@ -1,4 +1,3 @@
-include("../src/vna_control.jl")
 include("../examplesdom/stages.jl")
 include("measurement.jl")
 include("plot.jl")
