@@ -23,13 +23,6 @@ function recv(socket::TCPSocket,nb::Integer)
     return read(socket,nb)
 end
 
-function clear(socket::TCPSocket)
-    refreshBuffer(socket)
-    if getBufferSize(socket) != 0
-        recv(socket)
-    end
-end
-
 function async_reader(io::IO, timeout_sec)::Channel
     ch = Channel(1)
     task = @async begin
@@ -61,6 +54,16 @@ end
 
 function refreshBuffer(socket::TCPSocket)
     @async eof(socket)
+
+    return
+end
+
+function clearBuffer(socket::TCPSocket)
+    refreshBuffer(socket)
+
+    if getBufferSize(socket) != 0
+        recv(socket)
+    end
 
     return
 end
@@ -265,7 +268,7 @@ function saveS2P(socket::TCPSocket,fileURL::String)
 end
 
 function getSweepTime(socket::TCPSocket)
-    clear(socket)
+    clearBuffer(socket)
     send(socket, "SENSe:SWEep:TIME?\n")
     bytes = recv(socket)
     return Float64(bytes)
@@ -277,6 +280,8 @@ Core.Float64(data::Array{UInt8}) = parse(Float64, String(data))
 
 function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
+        clearBuffer(vna)
+
         send(socket,"CALCulate1:PARameter:SELect 'CH1_S11_2'\n")
         send(socket,"CALCulate1:FORMat IMAGinary\n")
         send(socket,"CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
@@ -360,15 +365,17 @@ end
 function storeTraceInMemory(socket::TCPSocket, mnum::Integer)
     send(socket, "CALCulate1:PARameter:DEFine:EXTended 'data_"*string(mnum)*"','S11'\n")
     send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
-    send(socket,"SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
+    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
     send(socket, "CALCulate1:MATH:MEMorize;*OPC?\n")
 end
 
 function getTraceFromMemory(socket::TCPSocket, mnum::Integer; delete=true)
-    send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-    send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+    clearBuffer(vna)
+
+    send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+    send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
     send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
-    send(socket,"CALCulate1:DATA? SMEM\n") # Read the S11 parameter Data
+    send(socket, "CALCulate1:DATA? SMEM\n") # Read the S11 parameter Data
     # Returns
     # 1 Byte: Block Data Delimiter '#'
     # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
@@ -399,6 +406,8 @@ end
 
 function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     try
+        clearBuffer(vna)
+
         send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n") # Select the Channel and Measurement Parameter S11
         send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
         send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands

@@ -1,4 +1,43 @@
+import Dates
+import Serialization
+
 include("../src/JuXIMC.jl")
+include("../src/vna_control.jl")
+
+struct Measurement
+    label::String
+    param::VNAParameters
+    freq::Vector{Float64}
+    data::Matrix{ComplexF64}
+    pos::Vector{Position}
+    posSet::Vector{Integer}
+end
+
+# Saves a Measurement struct in a binary file
+# if [filename] is specified, the data is saved in this file
+# otherwise the date is saved in "[dir]/[name] yyyy-mm-dd HH:MM:SS.data"
+# with the current date and time
+function saveMeasurement(data::Measurement; filename::String="", name::String="unnamed", filedate=true)
+    if filename == ""
+        if filedate date = Dates.format(Dates.now(), "yyyy-mm-dd_") else date = "" end
+        i = 1
+        while true
+            filename = name * "_" * date * string(i) * ".data"
+            if !isfile(filename) break end
+            i += 1
+        end
+    end
+
+    file = open(filename, "w")
+    Serialization.serialize(file, data)
+    close(file)
+end
+
+# Reads a Measurement struct from a binary file
+# correct data format is assumed => be cautious to only open trusted files
+function readMeasurement(filename::String)::Measurement
+    Serialization.deserialize(filename)
+end
 
 function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::Integer=500)
     if startPos <= endPos
@@ -8,7 +47,7 @@ function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::I
     end
 end
 
-function performContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
+function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(socket)
 

@@ -3,8 +3,7 @@ using LaTeXStrings
 import SciPy
 import Printf
 
-include("analysis.jl")
-include("binaryIO.jl")
+# include("measurement.jl")
 
 const motorConversionFactor::Float64 = 6 / 500 # mm / step
 
@@ -49,7 +48,7 @@ function getDiag(M::Matrix)
     return ret
 end
 
-function plotGaussianFit(p,meas::Measurement; color=:indianred1, xIntervall::Tuple{Real, Real}=(0, 0))
+function plotGaussianFit(meas::Measurement; color=:indianred1, xIntervall::Tuple{Real, Real}=(0, 0))
 
     # The sum of the field over every frequency
     E = calcFieldProportionality(meas) .*1000
@@ -108,7 +107,7 @@ function plotGaussianFit(p,meas::Measurement; color=:indianred1, xIntervall::Tup
     
     ### Plotting the data and fit ###
     
-    #plotData = plot!(legend=:topleft)
+    plotData = plot(legend=:topleft)
 
     # Fit intervall
     if xIntervall != (0, 0) plotData = vspan!([x[a],x[b]]; color=:gray, alpha=0.2, label="Fit Intervall") end
@@ -134,7 +133,7 @@ function plotGaussianFit(p,meas::Measurement; color=:indianred1, xIntervall::Tup
     plotRes = plot!(ylabel="Residuals")
     plotRes = plot!(xlabel="Position [mm]")
 
-    plot(plotData, plotRes; layout=grid(2, 1, heights=[3/4, 1/4]), link=:x)
+    display(plot(plotData, plotRes; layout=grid(2, 1, heights=[3/4, 1/4]), link=:x))
 
     return (plotData, plotRes, p, pErr, chiq, ndof)
 
@@ -251,3 +250,58 @@ function plotGaussianFit(M::Vector{Measurement}; color=:indianred1, xIntervall::
 
     return (plotData, plotRes, p, pErr, chiq, ndof)
 end
+
+
+
+
+### Analysis ###
+
+function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::ComplexF64, frequency::Float64)
+    return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency ))
+end
+
+function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
+    ret = Vector{Float64}(undef, 0)
+
+    for S in S_pertubed
+        push!(ret, calcFieldProportionality(S, S_unperturbed, frequency))
+    end
+
+    return ret
+end
+
+function calcFieldProportionality(S_perturbed::Vector{ComplexF64}, frequency::Float64)
+    ret = Vector{Float64}(undef, 0)
+
+    for S in S_perturbed
+        push!(ret, calcFieldProportionality(S, S_perturbed[begin], frequency))
+    end
+
+    return ret
+end
+
+function calcFieldProportionality(S_perturbed::Matrix{ComplexF64}, frequency::Vector{Float64})
+    ret = Vector{Vector{Float64}}(undef, 0)
+
+    for i in eachindex(frequency)
+        push!(ret, calcFieldProportionality(S_perturbed[i,:], frequency[i]))
+    end
+
+    return Matrix(reduce(hcat, ret))
+end
+
+calcFieldProportionality(meas::Measurement) = calcFieldProportionality(meas.data, meas.freq)
+
+
+function correctPosition(pos::Vector{Float64}, sweepPoints::Integer, sweepTime::Real, motorSpeed::Real)
+    d = sweepTime * motorSpeed
+    ret = Vector{Vector{Float64}}(undef, 0)
+    
+    for i in 1:sweepPoints
+        push!(ret, (pos .+ i*d))
+    end
+
+    return Matrix(reduce(hcat, ret))
+end
+
+#correctPosition(meas::Measurement) = correctPosition(meas.pos, meas.VNAParameters.sweeppoints, meas.VNAParameters.sweeptime, meas.MotorParameter.speed)
