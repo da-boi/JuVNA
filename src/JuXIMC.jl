@@ -120,19 +120,19 @@ function getPosition(devices::Vector{DeviceId}; fmt::Type=Matrix)   # fmt = Vect
     if fmt == Matrix
         P = Matrix{Int64}(undef,length(devices),3)
     elseif fmt == Vector
-        P = Vector{Position}(undef,length(devices))
+        P = Vector{Tuple{Int,Int}}(undef,length(devices))
     else
         error("Unsupported output format.")
     end
 
     for i in eachindex(devices)
-        p = getPosition(devices[i])[2]
+        p = getPosition(devices[i])
         if fmt == Matrix
             P[i,1] = copy(p.Position)
             P[i,2] = copy(p.uPosition)
             P[i,3] = copy(p.EncPosition)
         elseif fmt == Vector
-            P[i] = copy(p)
+            P[i] = (p.Position,p.uPosition)
         end
     end
 
@@ -149,7 +149,7 @@ function getPosition(devices::DeviceId...; fmt::Type=Matrix)
     end
 
     for i in eachindex(devices)
-        p = getPosition(devices[i])[2]
+        p = getPosition(devices[i])
         if fmt == Matrix
             P[i,1] = copy(p.Position)
             P[i,2] = copy(p.uPosition)
@@ -157,6 +157,20 @@ function getPosition(devices::DeviceId...; fmt::Type=Matrix)
         elseif fmt == Vector
             P[i] = copy(p)
         end
+    end
+
+    return P
+end
+
+function getPosition(devices::Vector{DeviceId},
+        cal::Dict{String,Tuple{Symbol,Float64}};
+        outputunit=:m)
+    P = Vector{Float64}(undef,length(devices))
+
+    for i in eachindex(devices)
+        p = getPosition(devices[i])
+        P[i] = steps2x(p.Position,p.uPosition; outputunit=outputunit,
+            cal=cal[getStageName(devices[i])])
     end
 
     return P
@@ -194,7 +208,6 @@ function commandMove(device::DeviceId,pos::Int32,upos::Int32; info=false)
     return result
 end
 
-# const commandMove(device::DeviceId,pos::Integer,upos::Integer) = commandMove(device,Int32(pos),Int32(upos))
 const commandMove(device::DeviceId,pos::Real,upos::Real) = commandMove(device,Int32(pos),Int32(upos))
 
 function commandMove(device::DeviceId,pos::Position; info=false)
@@ -207,13 +220,13 @@ function commandMove(device::DeviceId,pos::Position; info=false)
     return result
 end
 
-function commandMove(devices::Vector{DeviceId},positions::Vector{Position})
+function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}})
     if length(devices) != length(positions)
         error("Device number and position number don't match.")
     end
     
     for i in eachindex(devices)
-        commandMove(devices[i],positions[i])
+        commandMove(devices[i],positions[i][1],positions[i][2])
     end
 end
 
@@ -227,7 +240,7 @@ function commandMove(devices::Vector{DeviceId},positions::Matrix{Int32}; info=fa
     end
 end
 
-function commandMove(device::DeviceId,x::Real,cal::Dict{String,Tuple{Symbol,Int}}; info=false,inputunit=:mm)
+function commandMove(device::DeviceId,x::Real,cal::Dict{String,Tuple{Symbol,Float64}}; info=false,inputunit=:mm)
     p = x2steps(x; inputunit=inputunit,cal=cal[getStageName(device)])
 
     info && println("\n Going to $x$inputunit = $(p[1]), $(p[2])")
@@ -239,7 +252,7 @@ function commandMove(device::DeviceId,x::Real,cal::Dict{String,Tuple{Symbol,Int}
     return result
 end
 
-function commandMove(devices::Vector{DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Symbol,Int}}; info=false,inputunit=:mm)
+function commandMove(devices::Vector{DeviceId},x::Vector{<:Real},cal::Dict{String,Tuple{Symbol,Float64}}; info=false,inputunit=:mm)
     if length(devices) != length(x)
         error("Amount of values don't match.")
     end
@@ -579,16 +592,6 @@ function setupDevices(probeflags::UInt32,enumhints::Base.CodeUnits{UInt8,String}
     end
 
     return devcount, devenum, enumnames
-end
-
-
-
-
-
-
-
-function checkCollision(pos::Vector{<:Real},newpos::Vector{<:Real},)
-    return false
 end
 
 
