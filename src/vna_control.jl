@@ -370,7 +370,7 @@ function storeTraceInMemory(socket::TCPSocket, mnum::Integer)
 end
 
 function getTraceFromMemory(socket::TCPSocket, mnum::Integer; delete=true)
-    clearBuffer(vna)
+    
 
     send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
     send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands

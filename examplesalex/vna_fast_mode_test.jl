@@ -1,4 +1,4 @@
-include("../examplesdom/stages.jl")
+include("stages.jl")
 include("measurement.jl")
 include("plot.jl")
 
@@ -8,9 +8,9 @@ devcount, devenum, enumnames = setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,
 
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
-closeDevices(D[1:3])
-D = D[4]
-
+closeDevices(D[1:2])
+#D = D[4]
+D = D[3]
 
 ### Connect to the VNA ###
 power=-20
