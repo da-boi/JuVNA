@@ -140,6 +140,99 @@ function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Int
     return (S_data, f_data, pos_data, posSet)
 end
 
+
+
+function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
+    speedReset = getSpeed(D[4])
+    for i in 1:2
+        
+        setSpeed(D[i+2], speedSetup)  
+        command_move(D[i+2], startPos, 0) 
+        
+    end
+    
+    for i in 1:5
+
+        pos_data = Vector{Position}(undef, 0)
+        f_data = getFreqAsBinBlockTransfer(vna)
+        current = 1
+        posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
+       
+        if i % 2 == 0
+            commandMove(D[4],  startPos, 0)
+            commandWaitForStop(D[4])
+        
+            commandMove(D[3], stepSize*i, 0)
+            commandWaitForStop(D[3])
+            println(i,"ungerade")
+        else
+            commandMove(D[4], endPos, 0)
+            commandWaitForStop(D[4])
+        end
+    
+        while true
+            currentPos = getPos(D[4])
+    
+            # Check wether the current position has passed the intended point of measurement.
+            # The condition if a point has been passed is dependent on the direction of travel.
+            if endPos > startPos
+                passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
+            else
+                passed = isGreaterEqPosition(Position(posSet[current], 0), currentPos)
+            end
+    
+            # If a point has been passed, perform a measurement
+            if passed
+                storeTraceInMemory(socket, current)
+                push!(pos_data, currentPos)
+                current += 1
+                if currentPos == length(posSet) + 1 break end
+            end
+    
+            # Redundant check if the end has been reached, in case a measurement position lies
+            # beyond the end position
+            if currentPos.Position == endPos break end
+        end
+    
+        # Read the data from Memory
+
+        # Reset the speed to the prior speed
+        setSpeed(D[4], speedReset[begin])
+
+        S_data = Vector{Vector{ComplexF64}}(undef, 0)
+
+        complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
+
+        if i % 2 == 0
+            if (current-1) > length(posSet)
+                error("Measurement points missing: motor speed probably to high")
+            elseif (current-1) < length(posSet)
+                error("Measurement points missing: motor speed probably to high***2")
+            
+            end
+        end
+
+        for i in 1:(length(posSet))
+            push!(S_data, complexFromTrace(getTraceFromMemory(socket, i)))
+        end
+
+        # Reform the data to a Matrix{Float64}
+        S_data = Matrix(reduce(hcat, S_data))
+
+    end
+    return (S_data, f_data, pos_data, posSet)
+    
+end
+    
+    
+    
+
+
+
+
+
+
+
 #=
 function getContinousMeasurement(startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
     S_data = Vector{Vector{ComplexF64}}(undef, 0)
