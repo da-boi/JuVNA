@@ -1,3 +1,5 @@
+
+using DelimitedFiles
 include("stages.jl")
 include("measurement.jl")
 include("plot.jl")
@@ -7,10 +9,10 @@ include("plot.jl")
 devcount, devenum, enumnames = setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,b"addr=134.61.12.184")
 
 D = openDevices(enumnames,stagenames)
-checkOrdering(D,stagenames)
-closeDevices(D[1:2])
+# checkOrdering(D,stagenames)
+#closeDevices(D[1:2])
 #D = D[4]
-D = D[3]
+D = D[2]
 
 ### Connect to the VNA ###
 power=-20
@@ -27,6 +29,7 @@ vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz], power=power, cen
 meas = Measurement("speedtest", vnaParam, f, S, pos, posSet)
 saveMeasurement(meas; filename="metalwire_3GHz.data")
 
+
 plotHeatmap(meas)
 plotGaussianFit(meas)
 
@@ -34,3 +37,33 @@ meas_floss = readMeasurement("floss_3GHz.data")
 meas_metal = readMeasurement("metalwire_3GHz.data")
 
 plotGaussianFit([meas_floss, meas_metal])
+
+println(S)
+println(pos)
+
+
+
+filename = "S.txt" 
+fileS = open(filename, "w")  
+writedlm(fileS, S, ',')
+close(fileS)
+
+filename = "Pos.txt" 
+filePos = open(filename, "w")  
+
+# for i in 1:length(posSet)
+#     fullPos = pos[i].Position, pos[i].uPosition
+#     println(fullPos)
+#     #println(pos[i].Position, ';', pos[i].uPosition)
+#     writedlm(filePos, fullPos; dims=(length(posSet),2))
+    
+# end    
+
+
+p = [pos[i].Position for i in 1:length(posSet)]
+up = [pos[i].uPosition for i in 1:length(posSet)]
+
+writedlm(filePos, [p up])
+
+close(filePos)
+
