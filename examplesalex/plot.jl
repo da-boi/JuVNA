@@ -256,6 +256,13 @@ end
 
 ### Analysis ###
 
+
+function calcDeltaS(S_perturbed::ComplexF64, S_unperturbed::ComplexF64)
+    return Float64((abs(S_perturbed - S_unperturbed)))
+end
+
+
+
 function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::ComplexF64, frequency::Float64)
     return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency ))
 end

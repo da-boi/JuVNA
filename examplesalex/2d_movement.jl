@@ -12,15 +12,25 @@ closeDevices(D[1:2])
 #D = D[4]
 
 
-nullPos = 1000
 
-startPos = 0
-endPos  = 28000
+power=-20
+f_center::Float64 = 19e9
+f_span::Float64 = 3e9
+sweeppoints::Integer = 128
+ifbandwidth::Integer = 100e3
+measurement::String = "CH1_S11_1"
 
-speedSetup=2000
+vna = connectVNA()
+vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz], power=power, center=f_center, span=f_span, sweepPoints=sweeppoints, ifbandwidth=ifbandwidth)
+
+@time S, f, pos, posSet = twoDMeasurement(vna, 0, 28000; speed=1000, speedSetup=1000, stepSize=500)
+
+meas = Measurement("speedtest", vnaParam, f, S, pos, posSet)
+saveMeasurement(meas; filename="metalwire_3GHz.data")
 
 
 
+#=
 for i in 1:2
     speedReset = getSpeed(D[i+2])
     setSpeed(D[i+2], speedSetup)
@@ -30,7 +40,7 @@ command_move(D[3], nullPos, nullPos)
 command_move(D[4], nullPos, nullPos)
 
 
-for i in 1:2
+for i in 1:10
     nowPos_BIG_CH =  getPos(D[3])
     nowPos_BIGGER_CH = getPos(D[4])
     pos_data = Vector{Position}(undef, 0)
@@ -78,7 +88,8 @@ for i in 1:2
         println(i,"gerade")
     end
 end
-
+=#
+deleteTrace(vna, 1)
 closeDevices(D[1:4])
     
 
