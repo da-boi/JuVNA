@@ -36,5 +36,8 @@ b = PhysicalBooster(devices)
 
 
 
+homeZero(b)
 
+move(b,[0.01,0.01]; additive=true)
 
+commandMove(D,[10,10],stagecals)

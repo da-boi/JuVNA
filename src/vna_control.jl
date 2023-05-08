@@ -274,6 +274,8 @@ function getSweepTime(socket::TCPSocket)
     return Float64(bytes)
 end
 
+import Core: Int, Float64
+
 Core.Int(data::Array{UInt8}) = parse(Int, String(data))
 Core.Float64(data::Array{UInt8}) = parse(Float64, String(data))
 

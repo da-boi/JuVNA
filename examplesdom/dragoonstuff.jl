@@ -136,9 +136,12 @@ end
 
 
 function getPos(booster::PhysicalBooster)
-    return steps2pos(getPos(b.devices.ids; fmt=Vector),b)
+    return steps2pos(getPos(booster.devices.ids; fmt=Vector),booster)
 end
 
+function updatePos!(booster::PhysicalBooster)
+    booster.pos = getPos(booster)
+end
 
 
 
@@ -195,22 +198,45 @@ function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}}
     end
 end
 
-function move(booster::PhysicalBooster,newpos::Vector{Float64}; additive=false)
-    if additive
-        checkCollision(booster.pos+newpos,booster) && error("Discs are about to collide!")
-        
-        booster.pos += newpos
+# function move(booster::PhysicalBooster,newpos::Vector{Float64};
+#         additive=false, info::Bool=false)
+    
+#     if additive
+#         updatePos!(booster)
 
-        commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
-        commandWaitForStop(booster.devices.ids)
-    else
-        checkCollision(newpos,booster) && error("Discs are about to collide!")
+#         checkCollision(booster.pos,newpos,booster; additive=additive) &&
+#             error("Discs are about to collide!")
 
-        booster.pos = copy(newpos)
+#         commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
+#         commandWaitForStop(booster.devices.ids)
+
+#         updatePos!(booster)
+#     else
+#         checkCollision(newpos,booster) && error("Discs are about to collide!")
+
+#         booster.pos = copy(newpos)
         
-        commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
-        commandWaitForStop(booster.devices.ids)
-    end
+#         commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
+#         commandWaitForStop(booster.devices.ids)
+#     end
+# end
+
+function move(booster::PhysicalBooster,newpos::Vector{Float64};
+        additive=false, info::Bool=false)
+
+    updatePos!(booster)
+
+    info && println("Moving to ",booster.pos .* additive + newpos)
+
+    checkCollision(booster.pos,newpos,booster; additive=additive) &&
+        error("Discs are about to collide!")
+    
+    commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
+    commandWaitForStop(booster.devices.ids)
+
+    info && println("Finished moving.")
+
+    updatePos!(booster)
 end
 
 function homeZero(booster::PhysicalBooster)
