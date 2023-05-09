@@ -1,5 +1,5 @@
 import Dates
-import Serialization
+using JLD2, FileIO
 
 include("../src/JuXIMC.jl")
 include("../src/vna_control.jl")
@@ -13,30 +13,26 @@ struct Measurement
     posSet::Vector{Integer}
 end
 
-# Saves a Measurement struct in a binary file
-# if [filename] is specified, the data is saved in this file
-# otherwise the date is saved in "[dir]/[name] yyyy-mm-dd HH:MM:SS.data"
-# with the current date and time
-function saveMeasurement(data::Measurement; filename::String="", name::String="unnamed", filedate=true)
+function saveMeasurement(data; filename::String="", name::String="unnamed", filedate=true)
     if filename == ""
         if filedate date = Dates.format(Dates.now(), "yyyy-mm-dd_") else date = "" end
         i = 1
         while true
-            filename = name * "_" * date * string(i) * ".data"
+            filename = name * "_" * date * string(i) * ".jld2"
             if !isfile(filename) break end
             i += 1
         end
     end
 
-    file = open(filename, "w")
-    Serialization.serialize(file, data)
-    close(file)
+    @save filename data
+
+    return
 end
 
-# Reads a Measurement struct from a binary file
-# correct data format is assumed => be cautious to only open trusted files
-function readMeasurement(filename::String)::Measurement
-    Serialization.deserialize(filename)
+function readMeasurement(filename::String)
+    @load filename data
+
+    return data
 end
 
 function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::Integer=500)

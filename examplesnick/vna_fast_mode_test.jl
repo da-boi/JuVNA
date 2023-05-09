@@ -30,7 +30,7 @@ saveMeasurement(meas; filename="metalwire_3GHz.data")
 plotHeatmap(meas)
 plotGaussianFit(meas)
 
-meas_floss = readMeasurement("floss_3GHz.data")
+meas_floss = readMeasurement("continous_zahnseide_300MHz.data")
 meas_metal = readMeasurement("metalwire_3GHz.data")
 
 plotGaussianFit([meas_floss, meas_metal])
