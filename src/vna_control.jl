@@ -59,11 +59,8 @@ function refreshBuffer(socket::TCPSocket)
 end
 
 function clearBuffer(socket::TCPSocket)
-    refreshBuffer(socket)
-
-    if getBufferSize(socket) != 0
-        recv(socket)
-    end
+    vna.buffer.size = 0
+    vna.buffer.ptr = 1
 
     return
 end
@@ -352,8 +349,31 @@ function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     end
 end
 
+function getCatalog(socket::TCPSocket)
+    send(socket,"CALCulate:PARameter:CATalog?\n")
+    data = recv(vna)
+    return String(data)
+end
+
 function deleteTrace(socket::TCPSocket, mnum::Integer)
     send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n")
+end
+
+function deleteAllTraces(socket::TCPSocket)
+    send(socket,"CALCulate:PARameter:CATalog?\n")
+    data = recv(vna)
+    catalog = split(String(data), ',')
+    
+    pattern = r"data_\d+"
+    
+    for s in catalog
+        m = match(pattern, s)
+        if m !== nothing
+            send(socket,"CALCulate:PARameter:DELete '"*m.match*"'\n")
+        end
+    end
+
+    return
 end
 
 function setFastSweep(socket::TCPSocket, fast::Bool)
@@ -372,7 +392,7 @@ function storeTraceInMemory(socket::TCPSocket, mnum::Integer)
 end
 
 function getTraceFromMemory(socket::TCPSocket, mnum::Integer; delete=true)
-    
+    clearBuffer(vna)
 
     send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
     send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
@@ -491,7 +511,8 @@ function instrumentSimplifiedSetup(socket::TCPSocket;
         span::Float64 = 50e6,
         ifbandwidth::Int = Int(5e6),
         sweepPoints::Int = 101,
-        fastSweep::Bool = true
+        fastSweep::Bool = true,
+        measurement::String = "CH1_S11_1"
     )
 
     setCalibration(socket,calName)

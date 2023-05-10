@@ -47,6 +47,9 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(socket)
 
+    # delete stray traces from incomplete previous measurements
+    deleteAllTraces(vna) 
+
     # Calculate all the points at which a measurement is to be done
     posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
     current = 1
@@ -78,13 +81,15 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
             storeTraceInMemory(socket, current)
             push!(pos_data, currentPos)
             current += 1
-            if currentPos == length(posSet) + 1 break end
+            if current == length(posSet) + 1 break end
         end
 
         # Redundant check if the end has been reached, in case a measurement position lies
         # beyond the end position
         if currentPos.Position == endPos break end
     end
+
+    println("yeaa")
 
     # Read the data from Memory
 

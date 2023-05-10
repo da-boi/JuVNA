@@ -16,11 +16,11 @@ function plotHeatmap(meas::Measurement; color=:inferno)
     x = steps .* motorConversionFactor
 
     gr()
-    heatmap(x, meas.freq.*1e-9, transpose(E);
+    display(heatmap(x, meas.freq.*1e-9, transpose(E);
         c=color,
         xlabel="Position [mm]",
         ylabel="Frequency [GHz]",
-    )
+    ))
 end
 
 # selected color schemes for the heatmap
