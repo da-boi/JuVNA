@@ -43,7 +43,7 @@ move(b,[0.01,0.01]; additive=true)
 freqs = genFreqs(22.025e9,50e6; length=10)
 freqsplot = genFreqs(22.025e9,150e6; length=1000)
 
-hist = initHist(booster,10000,freqs,(getObjAna1d,[]))
+hist = initHist(booster,100,freqs,(getObjAna1d,[]))
 
 # nelderMead(booster::AnalyticalBooster,hist::Vector{State},freqs::Array{Float64},
 #     α::Float64,β::Float64,γ::Float64,δ::Float64,
@@ -67,7 +67,7 @@ trace = nelderMead(b,hist,freqs,
                     (initSimplexCoord,[1e-4]),
                     (getSimplexObj,[]),
                     (unstuckDont,[]);
-                    maxiter=Int(1e3),
+                    maxiter=Int(1e1),
                     showtrace=true,
                     showevery=100,
                     unstuckisiter=true);
