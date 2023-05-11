@@ -24,16 +24,13 @@ measurement::String = "CH1_S11_1"
 vna = connectVNA()
 vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweeppoints, ifbandwidth=ifbandwidth)
 
-@time S, f, pos, posSet = twoDMeasurement(vna, 0, 28000; speed=2000, speedSetup=2000, stepSize=500)
-
-#meas = Measurement("speedtest", vnaParam, f, S, pos, posSet)
-#saveMeasurement(meas; filename="cristal_BD01B_3GHz.data")
-
+@time S, f, pos, posSet = twoDMeasurement(vna, 0, 20000; speed=2000, speedSetup=2000, stepSize=500, vNum=5, sweepPoints=sweeppoints)
+meas = Measurement("", vnaParam, f, S, pos, posSet)
+saveMeasurement(meas; filename="2D-firstTests")
 
 deleteTrace(vna, 1)
 closeDevices(D)
     
-
 
 
 
