@@ -47,7 +47,7 @@ import Dragoon: PhysicalBooster
 function PhysicalBooster(devices::Devices; τ::Real=1e-3,ϵ::Real=24,maxlength::Real=2)
 
     b = PhysicalBooster(devices,zeros(length(devices.ids)),length(devices.ids),
-        τ,ϵ,maxlength,0)
+        τ,ϵ,maxlength,0,0)
 
     b.pos = steps2pos(getPos(devices.ids; fmt=Vector),b; outputunit=:m)
 
