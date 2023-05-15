@@ -1,25 +1,4 @@
 
-# mutable struct Boundaries <: BoundariesType
-#     lo::Float64
-#     hi::Float64
-
-#     function Boundaries()
-#         new(0,0)
-#     end
-
-#     function Boundaries(hi,lo)
-#         new(hi,lo)
-#     end
-# end
-
-# function checkBoundaries(b::Boundaries)
-#     if b.hi < b.lo
-#         error("Boundary failure: hi < lo!")
-#     end
-# end
-
-
-
 
 
 mutable struct Devices <: DevicesType
@@ -96,12 +75,6 @@ function pos2steps(newpos::Vector{Float64},booster::PhysicalBooster;
     return s
 end
 
-# function pos2steps(booster::PhysicalBooster; inputunit=:m)
-#     return @. pos2steps(booster.pos,booster.devices.stagecals,
-#         booster.devices.stagezeros; inputunit=inputunit)
-# end
-
-
 
 function steps2pos(steps::Tuple{Int,Int},
         stagecal::Tuple{Symbol,Float64},
@@ -124,15 +97,6 @@ function steps2pos(steps::Vector{Tuple{Int,Int}},booster::PhysicalBooster;
 
     return p
 end
-
-# function steps2pos(steps::Vector{Tuple{Int,Int}},booster::PhysicalBooster;
-#         outputunit=:m)
-
-#     return @. steps2pos(steps,booster.devices.stagecals,
-#         booster.devices.stagezeros; outputunit=outputunit)
-# end
-
-
 
 
 function getPos(booster::PhysicalBooster)
@@ -198,30 +162,9 @@ function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}}
     end
 end
 
-# function move(booster::PhysicalBooster,newpos::Vector{Float64};
-#         additive=false, info::Bool=false)
-    
-#     if additive
-#         updatePos!(booster)
+import Dragoon: move
 
-#         checkCollision(booster.pos,newpos,booster; additive=additive) &&
-#             error("Discs are about to collide!")
-
-#         commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
-#         commandWaitForStop(booster.devices.ids)
-
-#         updatePos!(booster)
-#     else
-#         checkCollision(newpos,booster) && error("Discs are about to collide!")
-
-#         booster.pos = copy(newpos)
-        
-#         commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
-#         commandWaitForStop(booster.devices.ids)
-#     end
-# end
-
-function move(booster::PhysicalBooster,newpos::Vector{Float64};
+function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
         additive=false, info::Bool=false)
 
     updatePos!(booster)
@@ -237,6 +180,7 @@ function move(booster::PhysicalBooster,newpos::Vector{Float64};
     info && println("Finished moving.")
 
     updatePos!(booster)
+    booster.timestamp += 1
 end
 
 function homeZero(booster::PhysicalBooster)

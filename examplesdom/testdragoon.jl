@@ -30,44 +30,33 @@ getPosition(D,stagecals)
 # vna = connectVNA()
 # instrumentSimplifiedSetup(vna)
 
-devices = Devices(D,stagecals,stagecols,stagezeros,stageborders);
+freqs = genFreqs(22.025e9,50e6; length=10);
+freqsplot = genFreqs(22.025e9,150e6; length=1000);
 
+devices = Devices(D,stagecals,stagecols,stagezeros,stageborders);
 b = PhysicalBooster(devices);
+b.epsilon = 9.;
 
 
 
 homeZero(b)
+move(b,[0.05,0.05]; additive=true)
 
-move(b,[0.01,0.01]; additive=true)
-
-freqs = genFreqs(22.025e9,50e6; length=10);
-freqsplot = genFreqs(22.025e9,150e6; length=1000);
 
 hist = initHist(b,100,freqs,(getObjAna1d,[]));
 
-# nelderMead(booster::AnalyticalBooster,hist::Vector{State},freqs::Array{Float64},
-#     α::Float64,β::Float64,γ::Float64,δ::Float64,
-#     objFunction::Tuple{Function,Vector},
-#     initSimplex::Tuple{Function,Vector},
-#     simplexObj::Tuple{Function,Vector},
-#     unstuckinator::Tuple{Function,Vector};
-
-#     maxiter::Integer=Int(1e2),
-#     showtrace::Bool=false,
-#     showevery::Integer=1,
-#     unstuckisiter::Bool=true,
-#     tracecentroid::Bool=false,
-#     traceevery::Int=1)
+s = initSimplexCoord(b.pos,0.005)
+getSimplexObj(s,[1,2,3],b,hist,freqs,(getObjAna1d,[]); reset=true)
 
     
 trace = nelderMead(b,hist,freqs,
-                    1.,1+2/b.ndisk,
-                    0.75-1/(2*b.ndisk),1-1/(b.ndisk),
-                    (getObjAna1d,[]),
-                    (initSimplexCoord,[1e-4]),
-                    (getSimplexObj,[]),
-                    (unstuckDont,[]);
-                    maxiter=Int(5),
-                    showtrace=true,
-                    showevery=100,
-                    unstuckisiter=true);
+                1.,1+2/b.ndisk,
+                0.75-1/(2*b.ndisk),1-1/(b.ndisk),
+                (getObjAna1d,[]),
+                (initSimplexCoord!,[1e-4]),
+                (getSimplexObj,[]),
+                (unstuckDont,[]);
+                maxiter=Int(5),
+                showtrace=true,
+                showevery=100,
+                unstuckisiter=true);
