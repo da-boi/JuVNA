@@ -209,7 +209,7 @@ version = "1.6.0"
 
 [[deps.Dragoon]]
 deps = ["BoostFractor", "Dates", "LinearAlgebra", "Plots"]
-git-tree-sha1 = "5ce321df457cd52ecd816e53c8c0b5f3711b9bc4"
+git-tree-sha1 = "7d79d3240697337eaaf3c006a4d6e8f052b8aa24"
 repo-rev = "main"
 repo-url = "https://github.com/bergermann/Dragoon.jl.git"
 uuid = "2528b1d8-4502-48e3-b632-a5c1e1215533"
