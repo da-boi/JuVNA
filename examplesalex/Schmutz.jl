@@ -1,3 +1,9 @@
+
+using Plots
+using Makie, Colors, ColorSchemes
+using GLMakie
+
+
 # Eine Beispielmatrix erstellen
 A = [1 2 3; 4 5 6; 7 8 9]
 
@@ -49,10 +55,16 @@ end
 
 S_data_list
 
-for i in 1:10
-    S_data[:, 1] = S_data_list[1:10]
-end
+
+S_data[:, 1] = S_data_list
+
 
 S_data
 
+using PlotlyJS
 
+x = 1:10  # x-Koordinaten
+y = 1:10  # y-Koordinaten
+z = [rand() for _ in 1:10, _ in 1:10]  # z-Werte (zufällige Beispieldaten)
+w = [rand(10) for _ in 1:10, _ in 1:10]  # w-Werte (zufällige Beispieldaten für die vierte Dimension)
+display(heatmap(x=x, y=y, z=z, color=w, colorbar_title="W"))    
