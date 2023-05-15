@@ -1,5 +1,6 @@
 import Dates
 import Serialization
+using JLD2, FileIO
 
 include("../src/JuXIMC.jl")
 include("../src/vna_control.jl")
@@ -12,31 +13,26 @@ struct Measurement
     pos::Vector{Position}
     posSet::Vector{Integer}
 end
-
-# Saves a Measurement struct in a binary file
-# if [filename] is specified, the data is saved in this file
-# otherwise the date is saved in "[dir]/[name] yyyy-mm-dd HH:MM:SS.data"
-# with the current date and time
-function saveMeasurement(data::Measurement; filename::String="", name::String="unnamed", filedate=true)
+function saveMeasurement(data; filename::String="", name::String="unnamed", filedate=true)
     if filename == ""
         if filedate date = Dates.format(Dates.now(), "yyyy-mm-dd_") else date = "" end
         i = 1
         while true
-            filename = name * "_" * date * string(i) * ".data"
+            filename = name * "_" * date * string(i) * ".jld2"
             if !isfile(filename) break end
             i += 1
         end
     end
 
-    file = open(filename, "w")
-    Serialization.serialize(file, data)
-    close(file)
+    @save filename data
+
+    return
 end
 
-# Reads a Measurement struct from a binary file
-# correct data format is assumed => be cautious to only open trusted files
-function readMeasurement(filename::String)::Measurement
-    Serialization.deserialize(filename)
+function readMeasurement(filename::String)
+    @load filename data
+
+    return data
 end
 
 function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::Integer=500)
@@ -142,48 +138,51 @@ end
 
 
 
-function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
-    speedReset = getSpeed(D[4])
+function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000,vNum::Integer=5, sweepPoints::Integer)
+    speedReset = getSpeed(D[2])
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(vna)
     current = 1
     posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
-       
+           
     for i in 1:2
         
-        setSpeed(D[i+2], speedSetup)  
-        commandMove(D[i+2], startPos, 0) 
-        commandWaitForStop(D[i+2])
+        setSpeed(D[i], speedSetup)  
+        commandMove(D[i], startPos, 0) 
+        commandWaitForStop(D[i])
         
     end
-    
-    for i in 1:5
+    S_data = Matrix{ComplexF64}(undef, sweepPoints, vNum)
+
+
+    for i in 1:vNum
+        println("Runde ", i)
         if i == 1    
-            commandMove(D[4], endPos, 0)
-            commandWaitForStop(D[4])
+            commandMove(D[2], endPos, 0)
+            commandWaitForStop(D[2])
             println("Erster Move")    
 
         elseif i % 2 == 0
-            commandMove(D[3], stepSize*i, 0)
-            commandWaitForStop(D[3])
+            commandMove(D[1], stepSize*i, 0)
+            commandWaitForStop(D[1])
             
-            commandMove(D[4],  startPos, 0)
-            commandWaitForStop(D[4])
+            commandMove(D[2],  startPos, 0)
+            commandWaitForStop(D[2])
             println(i," gerade")
 
         else
-            commandMove(D[3], stepSize*i, 0)
-            commandWaitForStop(D[3])
+            commandMove(D[1], stepSize*i, 0)
+            commandWaitForStop(D[1])
 
-            commandMove(D[4], endPos, 0)
-            commandWaitForStop(D[4])
+            commandMove(D[2], endPos, 0)
+            commandWaitForStop(D[2])
             println(i," ungerade")
         end
     
 
 
         while true
-            currentPos = getPos(D[4])
+            currentPos = getPos(D[2])
     
             # Check wether the current position has passed the intended point of measurement.
             # The condition if a point has been passed is dependent on the direction of travel.
@@ -199,50 +198,75 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         
             # If a point has been passed, perform a measurement
             if passed
+                println("passed ", current)
                 storeTraceInMemory(socket, current)
                 push!(pos_data, currentPos)
                 current += 1
+                #println(currentPos,length(posSet))
                 if currentPos == length(posSet) + 1 break end
             end
     
             # Redundant check if the end has been reached, in case a measurement position lies
             # beyond the end position
+            #println("while klappt halb ",currentPos.Position)
+            
             if currentPos.Position == endPos || currentPos.Position == startPos break end
         end
     
-
-#BIS HIER KLAPPTS SCHONMAL
-
 
 
         # Read the data from Memory
 
         # Reset the speed to the prior speed
-        setSpeed(D[4], speedReset[begin])
+        #setSpeed(D[4], speedReset[begin])
 
-        S_data = Vector{Vector{ComplexF64}}(undef, 0)
-
+        S_data_list = Vector{Vector{ComplexF64}}(undef, sweepPoints)
+        
         complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
-
+        
+        
+        #=
         if i % 2 == 0
             if (current-1) > length(posSet)
                 error("Measurement points missing: motor speed probably to high")
-            elseif (current-1) < length(posSet)
-                error("Measurement points missing: motor speed probably to high***2")
-            
             end
+        elseif (current-1) < length(posSet)
+            error("Measurement points missing: motor speed probably to high***2")
         end
         
-        for i in 1:(length(posSet))
-            push!(S_data, complexFromTrace(getTraceFromMemory(socket, i)))
-        end
+
         
+        for j in 1:(length(posSet))
+            println("complexFromTrace")
+            println(complexFromTrace(getTraceFromMemory(socket, j)))
+            push!(S_data, complexFromTrace(getTraceFromMemory(socket, j)))
+
+        end
+       
+        
+        for j in 1:(length(posSet))
+            println("complexFromTrace")
+            S_data_list[j] =  complexFromTrace(getTraceFromMemory(socket, j))
+        end
+        =#
+
+        d = complexFromTrace(getTraceFromMemory(socket, i))
+        
+        # println(d)
+        # println(size(d))
+
+        # push!(S_data_list, complexFromTrace(getTraceFromMemory(socket, 1)))
+
+        # println(length(S_data_list))
+        S_data[:,i] =  d
+        
+
         # Reform the data to a Matrix{Float64}
-        S_data = Matrix(reduce(hcat, S_data))
-    
+       # S_data = Matrix(reduce(hcat, S_data))
+        
     end
+
     return (S_data, f_data, pos_data, posSet)
-    
 end
     
     
