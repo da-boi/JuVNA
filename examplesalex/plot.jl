@@ -16,12 +16,13 @@ function plotHeatmap(meas::Measurement; color=:inferno)
     x = steps .* motorConversionFactor
 
     gr()
-    display!(heatmap(x, meas.freq.*1e-9, transpose(E);
+    display(heatmap(x, meas.freq.*1e-9, transpose(E);
         c=color,
         xlabel="Position [mm]",
         ylabel="Frequency [GHz]",
     ))
 end
+
 
 # selected color schemes for the heatmap
 # :inferno      # suitable for colorblind (default)
@@ -33,6 +34,17 @@ end
 findnearest(A, x) = findmin(abs.(A.-x))[2]
 
 # returns the diagonal of the Matrix as a Vector
+
+#=
+function plot2DHeatmap (meas::Measurement; color=:inferno)
+    E =     
+    
+end
+=#
+
+
+
+
 function getDiag(M::Matrix)
     lx = size(M, 1)
     ly = size(M, 2)
@@ -266,6 +278,7 @@ end
 function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::ComplexF64, frequency::Float64)
     return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency ))
 end
+
 
 function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
     ret = Vector{Float64}(undef, 0)

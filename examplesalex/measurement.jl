@@ -1,7 +1,7 @@
 import Dates
 import Serialization
 using JLD2, FileIO
-
+using DelimitedFiles
 include("../src/JuXIMC.jl")
 include("../src/vna_control.jl")
 
@@ -138,14 +138,29 @@ end
 
 
 
-function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000,vNum::Integer=5, sweepPoints::Integer)
-    speedReset = getSpeed(D[2])
+function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000,vNum::Integer=5, sweepPoints::Integer, motorSet::Integer)
+    
+    if motorSet == 1
+        BigChungus = 3
+        BiggerChungus = 4
+    elseif motorSet == 2
+        BigChungus = 1
+        BiggerChungus = 2
+    else
+        println("Error flasche Auswahl")
+        return 
+    end
+
+
+    speedReset = getSpeed(D[BiggerChungus])
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(vna)
-    current = 1
+    
     posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
+    posSetLen = length(posSet)::Int64
+   
            
-    for i in 1:2
+    for i in BigChungus:BiggerChungus
         
         setSpeed(D[i], speedSetup)  
         commandMove(D[i], startPos, 0) 
@@ -157,40 +172,55 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
 
     for i in 1:vNum
         println("Runde ", i)
+        current = 1
         if i == 1    
-            commandMove(D[2], endPos, 0)
-            commandWaitForStop(D[2])
+            commandMove(D[BiggerChungus], endPos, 0)
+            #commandWaitForStop(D[BiggerChungus])
             println("Erster Move")    
 
         elseif i % 2 == 0
-            commandMove(D[1], stepSize*i, 0)
-            commandWaitForStop(D[1])
+            commandMove(D[BigChungus], stepSize*i, 0)
+            commandWaitForStop(D[BigChungus])
+            println("Geht Runter")
             
-            commandMove(D[2],  startPos, 0)
-            commandWaitForStop(D[2])
+            commandMove(D[BiggerChungus],  startPos, 0)
+            #commandWaitForStop(D[BiggerChungus])
             println(i," gerade")
 
         else
-            commandMove(D[1], stepSize*i, 0)
-            commandWaitForStop(D[1])
+            commandMove(D[BigChungus], stepSize*i, 0)
+            commandWaitForStop(D[BigChungus])
+            println("Geht Runter")
 
-            commandMove(D[2], endPos, 0)
-            commandWaitForStop(D[2])
+            commandMove(D[BiggerChungus], endPos, 0)
+            #commandWaitForStop(D[BiggerChungus])
             println(i," ungerade")
         end
     
 
 
         while true
-            currentPos = getPos(D[2])
-    
+            currentPos = getPos(D[BiggerChungus])
+            
+            println("current Pos ",currentPos)
             # Check wether the current position has passed the intended point of measurement.
             # The condition if a point has been passed is dependent on the direction of travel.
+
+            
+
             if i % 2 == 0 
-                passed = isGreaterEqPosition(Position(posSet[current], 0), currentPos)
+                println("gerade ",length(posSet))
+                println(current)
+                println(typeof(current))
+                
+                println("Wenn ",currentPos, "kleiner ist als ", Position(posSet[posSetLen-current],0))
+                passed = isSmallerEqPosition(currentPos, Position(posSet[posSetLen-current], 0))
                 println(passed)
                 println("KLAPPT RÜCKWEG")
             else
+                println("ungerade ",length(posSet))
+                println(current)
+                println(typeof(current))
                 passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
                 println(passed)
                 println("KLAPPT HINWEG ")
@@ -202,15 +232,18 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
                 storeTraceInMemory(socket, current)
                 push!(pos_data, currentPos)
                 current += 1
-                #println(currentPos,length(posSet))
-                if currentPos == length(posSet) + 1 break end
+                #println(pos_data)
+                if current == length(posSet)   break end
             end
-    
+            
+            for j in 1:posSetLen
+                deleteTrace(vna, j)
+            end
             # Redundant check if the end has been reached, in case a measurement position lies
             # beyond the end position
             #println("while klappt halb ",currentPos.Position)
             
-            if currentPos.Position == endPos || currentPos.Position == startPos break end
+            #if currentPos.Position == endPos || currentPos.Position == startPos break end
         end
     
 
@@ -220,7 +253,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         # Reset the speed to the prior speed
         #setSpeed(D[4], speedReset[begin])
 
-        S_data_list = Vector{Vector{ComplexF64}}(undef, sweepPoints)
+        
         
         complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
         
