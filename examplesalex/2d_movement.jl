@@ -20,7 +20,7 @@ f_span::Float64 = 3e9
 sweepPoints::Integer = 128
 ifbandwidth::Integer = 100e3
 measurement::String = "CH1_S11_1"
-vNum = 10
+vNum = 5
 
 motorSet = 1            #1 Dominik ist nicht da  2 Dominik ist da
 
@@ -28,20 +28,21 @@ vna = connectVNA()
 vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweepPoints, ifbandwidth=ifbandwidth)
 
 @time S, f, pos, posSet = twoDMeasurement(vna, 0, 10000; speed=2000, speedSetup=2000, stepSize=500, vNum=vNum, sweepPoints=sweepPoints, motorSet=motorSet)
-meas = Measurement("", vnaParam, f, S, pos, posSet) 
+meas = Measurement2D("", vnaParam, f, S, pos, posSet) 
 saveMeasurement(meas; filename="2D-firstTests")
 
 
 
-calcFieldProportionality(meas)
+#calcFieldProportionality(meas)
 
 #=
-deleteTrace(vna, 20)
-for i in 1:22
+for i in 1:2
     deleteTrace(vna, i)
 end
+=#
+
+#deleteTrace(vna, 11)
 closeDevices(D)
- =#   
 
 
 

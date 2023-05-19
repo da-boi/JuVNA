@@ -13,6 +13,17 @@ struct Measurement
     pos::Vector{Position}
     posSet::Vector{Integer}
 end
+
+struct Measurement2D
+    label::String
+    param::VNAParameters
+    freq::Vector{Float64}
+    data::Matrix{Vector{ComplexF64}}
+    pos::Vector{Position}
+    posSet::Vector{Integer}
+end
+
+
 function saveMeasurement(data; filename::String="", name::String="unnamed", filedate=true)
     if filename == ""
         if filedate date = Dates.format(Dates.now(), "yyyy-mm-dd_") else date = "" end
@@ -158,7 +169,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     
     posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
     posSetLen = length(posSet)::Int64
-   
+    S_data = Matrix{Vector{ComplexF64}}(undef, length(posSet), vNum)
            
     for i in BigChungus:BiggerChungus
         
@@ -167,34 +178,38 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         commandWaitForStop(D[i])
         
     end
-    S_data = Matrix{ComplexF64}(undef, sweepPoints, vNum)
+    
 
+    
+    
 
-    for i in 1:vNum
-        println("Runde ", i)
+    for y in 1:vNum
+        println("Runde ", y)
+        #S_data_list = Vector{ComplexF64}(undef, sweepPoints)
+        
         current = 1
-        if i == 1    
+        if y == 1    
             commandMove(D[BiggerChungus], endPos, 0)
             #commandWaitForStop(D[BiggerChungus])
             println("Erster Move")    
 
-        elseif i % 2 == 0
-            commandMove(D[BigChungus], stepSize*i, 0)
+        elseif y % 2 == 0
+            commandMove(D[BigChungus], stepSize*y, 0)
             commandWaitForStop(D[BigChungus])
             println("Geht Runter")
             
             commandMove(D[BiggerChungus],  startPos, 0)
             #commandWaitForStop(D[BiggerChungus])
-            println(i," gerade")
+            println(y," gerade")
 
         else
-            commandMove(D[BigChungus], stepSize*i, 0)
+            commandMove(D[BigChungus], stepSize*y, 0)
             commandWaitForStop(D[BigChungus])
             println("Geht Runter")
 
             commandMove(D[BiggerChungus], endPos, 0)
             #commandWaitForStop(D[BiggerChungus])
-            println(i," ungerade")
+            println(y," ungerade")
         end
     
 
@@ -208,15 +223,16 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
 
             
 
-            if i % 2 == 0 
-                println("gerade ",length(posSet))
+            if y % 2 == 0 
+                println("y gerade ")
                 println(current)
-                println(typeof(current))
                 
-                println("Wenn ",currentPos, "kleiner ist als ", Position(posSet[posSetLen-current],0))
-                passed = isSmallerEqPosition(currentPos, Position(posSet[posSetLen-current], 0))
+                println("Wenn ",currentPos, "kleiner gleich ist als ", Position(posSet[length(posSet)+1-current],0))
+                passed = isSmallerEqPosition(currentPos, Position(posSet[length(posSet)+1-current], 0))
+
                 println(passed)
                 println("KLAPPT RÜCKWEG")
+                
             else
                 println("ungerade ",length(posSet))
                 println(current)
@@ -233,20 +249,20 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
                 push!(pos_data, currentPos)
                 current += 1
                 #println(pos_data)
-                if current == length(posSet)   break end
+                if current == length(posSet) +1  break end
             end
             
-            for j in 1:posSetLen
-                deleteTrace(vna, j)
-            end
+           
             # Redundant check if the end has been reached, in case a measurement position lies
             # beyond the end position
             #println("while klappt halb ",currentPos.Position)
             
             #if currentPos.Position == endPos || currentPos.Position == startPos break end
-        end
     
-
+        end
+        
+        
+        
 
         # Read the data from Memory
 
@@ -282,20 +298,33 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
             S_data_list[j] =  complexFromTrace(getTraceFromMemory(socket, j))
         end
         =#
+        for x in 1:length(posSet)
+            println(x,y)
+            S_params = complexFromTrace(getTraceFromMemory(socket, x))
+            
+            println(typeof(S_params))
+            println(typeof(S_data))
+            
+            S_data[x,y] = S_params
+            
+            #deleteTrace(socket, j)
+        end
+        #push!(S_data[i], S_data_matrix)
 
-        d = complexFromTrace(getTraceFromMemory(socket, i))
-        
         # println(d)
         # println(size(d))
 
         # push!(S_data_list, complexFromTrace(getTraceFromMemory(socket, 1)))
 
         # println(length(S_data_list))
-        S_data[:,i] =  d
+        
         
 
         # Reform the data to a Matrix{Float64}
-       # S_data = Matrix(reduce(hcat, S_data))
+        # S_data = Matrix(reduce(hcat, S_data))
+        
+        #println(S_data)
+        println(typeof(S_data))
         
     end
 
