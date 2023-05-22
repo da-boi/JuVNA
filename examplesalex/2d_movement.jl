@@ -27,28 +27,39 @@ motorSet = 1            #1 Dominik ist nicht da  2 Dominik ist da
 vna = connectVNA()
 vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweepPoints, ifbandwidth=ifbandwidth)
 
-@time S, f, pos, posSet = twoDMeasurement(vna, 0, 10000; speed=2000, speedSetup=2000, stepSize=500, vNum=vNum, sweepPoints=sweepPoints, motorSet=motorSet)
-meas = Measurement2D("", vnaParam, f, S, pos, posSet) 
+@time S, f, pos_BIGGER, pos_BIG, posSet = twoDMeasurement(vna, 0, 10000; speed=2000, speedSetup=2000, stepSize=500, vNum=vNum, sweepPoints=sweepPoints, motorSet=motorSet)
+length(S[1,1])
+
+transform(S)
+
+meas = Measurement2D("", vnaParam, f, S, pos_BIGGER, pos_BIG, posSet)
 saveMeasurement(meas; filename="2D-firstTests")
 
 
-
-#calcFieldProportionality(meas)
+calcFieldProportionality2D(meas)
 
 #=
-for i in 1:2
+for i in 1:10
     deleteTrace(vna, i)
 end
 =#
-
-#deleteTrace(vna, 11)
 closeDevices(D)
 
+freq = 20*10^9
+
+S[1,1][64]
+f_index_20GHz = argmin(abs.(f .- 20*10^9))
+println(f_index_20GHz)
+f[64]
 
 
+heatmap_data = Matrix{ComplexF64}(undef, length(posSet), vNum)
 
+for y in 1:vNum
+    for x in 1:length(posSet)
+        println(S[x,y][argmin(abs.(f .- freq))])
 
-
-
-
+        heatmap_data[x,y] = S[x,y][argmin(abs.(f .- freq))]
+    end
+end
 

@@ -19,7 +19,8 @@ struct Measurement2D
     param::VNAParameters
     freq::Vector{Float64}
     data::Matrix{Vector{ComplexF64}}
-    pos::Vector{Position}
+    pos_BIGGER::Vector{Position}
+    pos_BIG::Vector{Position}
     posSet::Vector{Integer}
 end
 
@@ -163,8 +164,9 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     end
 
 
-    speedReset = getSpeed(D[BiggerChungus])
-    pos_data = Vector{Position}(undef, 0)
+    #speedReset = getSpeed(D[BiggerChungus])
+    pos_data_BIGGER = Vector{Position}(undef, 0)
+    pos_data_BIG = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(vna)
     
     posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
@@ -185,6 +187,8 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
 
     for y in 1:vNum
         println("Runde ", y)
+        currentPos_BIG = getPos(D[BigChungus])
+        push!(pos_data_BIG, currentPos_BIG)
         #S_data_list = Vector{ComplexF64}(undef, sweepPoints)
         
         current = 1
@@ -215,9 +219,10 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
 
 
         while true
-            currentPos = getPos(D[BiggerChungus])
+            currentPos_BIGGER = getPos(D[BiggerChungus])
             
-            println("current Pos ",currentPos)
+            
+            println("current Pos ",currentPos_BIGGER)
             # Check wether the current position has passed the intended point of measurement.
             # The condition if a point has been passed is dependent on the direction of travel.
 
@@ -227,8 +232,8 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
                 println("y gerade ")
                 println(current)
                 
-                println("Wenn ",currentPos, "kleiner gleich ist als ", Position(posSet[length(posSet)+1-current],0))
-                passed = isSmallerEqPosition(currentPos, Position(posSet[length(posSet)+1-current], 0))
+                println("Wenn ",currentPos_BIGGER, "kleiner gleich ist als ", Position(posSet[length(posSet)+1-current],0))
+                passed = isSmallerEqPosition(currentPos_BIGGER, Position(posSet[length(posSet)+1-current], 0))
 
                 println(passed)
                 println("KLAPPT RÜCKWEG")
@@ -237,7 +242,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
                 println("ungerade ",length(posSet))
                 println(current)
                 println(typeof(current))
-                passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
+                passed = isGreaterEqPosition(currentPos_BIGGER, Position(posSet[current], 0))
                 println(passed)
                 println("KLAPPT HINWEG ")
             end
@@ -246,7 +251,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
             if passed
                 println("passed ", current)
                 storeTraceInMemory(socket, current)
-                push!(pos_data, currentPos)
+                push!(pos_data_BIGGER, currentPos_BIGGER)
                 current += 1
                 #println(pos_data)
                 if current == length(posSet) +1  break end
@@ -307,7 +312,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
             
             S_data[x,y] = S_params
             
-            #deleteTrace(socket, j)
+            
         end
         #push!(S_data[i], S_data_matrix)
 
@@ -325,13 +330,24 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         
         #println(S_data)
         println(typeof(S_data))
-        
+        #deleteTrace(socket, 1)
+
+
+
     end
 
-    return (S_data, f_data, pos_data, posSet)
+    return (S_data, f_data, pos_data_BIGGER, pos_data_BIG, posSet)
 end
     
-    
+
+#Transforming the Maxtrix where each cell contains a vector to a vector containing matricies. 
+function transform(S)
+    transData = Vector{Matrix}(undef, sweepPoints)
+    for i in 1:sweepPoints
+        transData[i] = S[:,:][i]
+    end 
+    return transData
+end
     
 
 
