@@ -150,6 +150,21 @@ function checkCollision(pos::Vector{Float64},newpos::Vector{Float64},
     end
 end
 
+function checkBorders(newpos::Vector{Float64},booster::PhysicalBooster; additive::Bool=false)
+    for i in 1:booster.ndisk
+        if !(booster.devices.stageborders[i][2]*booster.devices.stageborders[i][1] <=
+                booster.pos[i]*additive+newpos[i] <=
+                booster.devices.stageborders[i][3]*booster.devices.stageborders[i][1])
+
+            return true
+        end
+    end
+
+    return false
+end
+
+
+
 
 
 function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}})
@@ -173,6 +188,11 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
 
     checkCollision(booster.pos,newpos,booster; additive=additive) &&
         error("Discs are about to collide!")
+
+    checkBorders(newpos,booster;additive=additive) &&
+        error("Discs are about to move out of bounds.")
+
+    checkBorders(newpos,booster)
     
     commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
     commandWaitForStop(booster.devices.ids)
@@ -183,6 +203,10 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
     booster.timestamp += 1
 end
 
+
+
+
+
 function homeZero(booster::PhysicalBooster)
     commandMove(booster.devices.ids,zeros(Int32,booster.ndisk,2))
     commandWaitForStop(booster.devices.ids)
@@ -191,4 +215,16 @@ end
 
 function homeHome(booster::PhysicalBooster)
     return 
+end
+
+
+
+
+
+function findInitPos(booster::PhysicalBooster; start::Union{Nothing,Vector{Float64}}=nothing)
+    if start !== nothing
+        move(booster,start)
+    end
+
+    
 end

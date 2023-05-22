@@ -34,8 +34,8 @@ stagecols = Dict{String,Tuple{Symbol,Float64,Float64}}(
 
 # (unit, left border, right border)
 stageborders = Dict{String,Tuple{Symbol,Float64,Float64}}(
-    "Monica" => (:mm,0,0),
-    "Alexanderson" => (:mm,0,0),
+    "Monica" => (:mm,250,350),
+    "Alexanderson" => (:mm,500,600),
     "Big Chungus" => (:mm,0,0),
     "Bigger Chungus" => (:mm,0,0),
 )
