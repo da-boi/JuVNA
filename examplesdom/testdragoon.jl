@@ -18,12 +18,12 @@ devcount, devenum, enumnames =
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
 
-# closeDevice(D[3])
+# closeDevice(D[3],D[4])
 D = D[1:2]
 
 
-commandMove(D,[0,0],stagecals)
-commandMove(D,[50,50],stagecals)
+# commandMove(D,[0,0],stagecals)
+# commandMove(D,[50,50],stagecals)
 
 getPosition(D,stagecals)
 
@@ -53,10 +53,10 @@ trace = nelderMead(b,hist,freqs,
                 1.,1+2/b.ndisk,
                 0.75-1/(2*b.ndisk),1-1/(b.ndisk),
                 (getObjAna1d,[]),
-                (initSimplexCoord!,[1e-4]),
+                (initSimplexCoord!,[0.005]),
                 (getSimplexObj,[]),
                 (unstuckDont,[]);
-                maxiter=Int(5),
+                maxiter=Int(100),
                 showtrace=true,
                 showevery=100,
                 unstuckisiter=true);
