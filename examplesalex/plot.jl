@@ -42,7 +42,23 @@ function plot2DHeatmap (meas::Measurement; color=:inferno)
 end
 =#
 
+function plotHeatmap2D(meas::Measurement2D; color=:inferno)
+    E = calcFieldProportionality2D(transData, frequency)
 
+    # The position vector
+    uStep = 256
+    stepsX = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 1:Int(length(meas.pos_BIGGER)/vNum)]
+    stepsY = [meas.pos_BIG[i].Position + meas.pos_BIG[i].uPosition/uStep for i in eachindex(meas.pos_BIG)]
+    x = stepsX .* motorConversionFactor
+    y = stepsY .*motorConversionFactor
+
+    gr()
+    display(heatmap(x, y, E;
+        c=color,
+        xlabel="x Position [mm]",
+        ylabel="y Position [mm]",
+    ))
+end
 
 
 function getDiag(M::Matrix)
@@ -274,12 +290,12 @@ function calcDeltaS(S_perturbed::ComplexF64, S_unperturbed::ComplexF64)
 end
 
 
-function calcFieldProportionality2D(S_perturbed::Matrix{Vector{ComplexF64}}, frequency::Vector{Float64})
-    E_data = Matrix{Float64}()
-    S_unperturbed = S_perturbed[1,1][64]
+function calcFieldProportionality2D(S_perturbed::Vector{Matrix{ComplexF64}}, frequency::Int64)
+    E_data = Matrix{Float64}(undef, vNum, length(posSet))
+    S_unperturbed = S_perturbed[frequency][1,1]
     for y in 1:vNum 
         for x in 1:length(posSet)
-            E_data[x,y] = Float64(sqrt(abs(abs(S_perturbed[x,y][64] - S_unperturbed)) / frequency[64] ))
+            E_data[y,x] = Float64(sqrt(abs(abs(S_perturbed[frequency][y,x] - S_unperturbed)) / frequency ))
         end
     end
     
@@ -336,7 +352,7 @@ function calcFieldProportionality(S_perturbed::Matrix{ComplexF64}, frequency::Ve
 end
 
 calcFieldProportionality(meas::Measurement) = calcFieldProportionality(meas.data, meas.freq)
-calcFieldProportionality2D(meas::Measurement2D) = calcFieldProportionality2D(meas.data, meas.freq)
+calcFieldProportionality2D(meas::Measurement2D) = calcFieldProportionality2D(transData, frequency)
 
 
 function correctPosition(pos::Vector{Float64}, sweepPoints::Integer, sweepTime::Real, motorSpeed::Real)

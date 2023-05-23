@@ -171,7 +171,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     
     posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
     posSetLen = length(posSet)::Int64
-    S_data = Matrix{Vector{ComplexF64}}(undef, length(posSet), vNum)
+    S_data = Matrix{Vector{ComplexF64}}(undef,  vNum, length(posSet))
            
     for i in BigChungus:BiggerChungus
         
@@ -304,13 +304,13 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         end
         =#
         for x in 1:length(posSet)
-            println(x,y)
+            println(y,x)
             S_params = complexFromTrace(getTraceFromMemory(socket, x))
             
-            println(typeof(S_params))
-            println(typeof(S_data))
+            #println(typeof(S_params))
+            #println(typeof(S_data))
             
-            S_data[x,y] = S_params
+            S_data[y,x] = S_params
             
             
         end
@@ -342,11 +342,16 @@ end
 
 #Transforming the Maxtrix where each cell contains a vector to a vector containing matricies. 
 function transform(S)
-    transData = Vector{Matrix}(undef, sweepPoints)
-    for i in 1:sweepPoints
-        transData[i] = S[:,:][i]
-    end 
-    return transData
+    transData = [rand(ComplexF64, vNum, length(posSet)) for _ in 1:sweepPoints]
+    for f in 1:sweepPoints
+        for y in 1:vNum
+            for x in 1:length(posSet)
+                transData[f][y,x] = S[y,x][f]
+            end
+        end
+        println(f)
+    end
+    return (transData)
 end
     
 
