@@ -18,3 +18,50 @@ vector = reshape(matrix, 128, 5*5)
 
 # Beispielmatrix
 matrix = [rand(ComplexF64, 5, 5) for _ in 1:128]
+
+
+
+using Interact
+using Plots
+
+# Funktion, die verschiedene Plots erzeugt
+function generate_plot(index)
+    # Hier kannst du verschiedene Plots basierend auf dem Index erstellen
+    if index == 1
+        plot([1, 2, 3], [4, 5, 6], xlabel = "X", ylabel = "Y", title = "Plot 1")
+    elseif index == 2
+        plot([1, 2, 3], [7, 8, 9], xlabel = "X", ylabel = "Y", title = "Plot 2")
+    elseif index == 3
+        plot([1, 2, 3], [10, 11, 12], xlabel = "X", ylabel = "Y", title = "Plot 3")
+    end
+end
+
+# Slider erstellen
+@manipulate for i in 1:3
+    generate_plot(i)
+end
+
+
+
+using Plots
+using ImageMagick
+
+# Funktion, die einen Plot für einen bestimmten Index erstellt
+function create_plot(index)
+    plot(rand(10), title = "Plot $index")
+end
+
+# Anzahl der Plots
+num_plots = 128
+
+# Array zum Speichern der Plots
+frames = []
+
+# Plots für jeden Index erstellen und zum Array hinzufügen
+for i in 1:num_plots
+    push!(frames, create_plot(i))
+    println(typeof(frames))
+end
+
+# Gif erstellen und speichern
+@time save("animation.gif", frames, fps = 10)

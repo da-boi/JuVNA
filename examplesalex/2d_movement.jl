@@ -33,11 +33,17 @@ meas = Measurement2D("", vnaParam, f, S, pos_BIGGER, pos_BIG, posSet)
 saveMeasurement(meas; filename="2D-firstTests")
 
 transData = transform(S)
-frequency = argmin(abs.(f .- 20*10^9))
-#E = calcFieldProportionality2D(transData, frequency)
+#frequency = argmin(abs.(f .- 20*10^9))
 
-plotHeatmap2D(meas)
+anim = for i in 1:10
+    frequency = i
+    plotHeatmap2D(meas)
+    println(i)
+end
+gif(anim, "anim_fps10.gif", fps = 10)
 
+
+plotFreq(meas)
 
 #=
 for i in 1:10

@@ -2,6 +2,7 @@ using Plots
 using LaTeXStrings
 import SciPy
 import Printf
+using ImageMagick
 
 # include("measurement.jl")
 
@@ -58,6 +59,11 @@ function plotHeatmap2D(meas::Measurement2D; color=:inferno)
         xlabel="x Position [mm]",
         ylabel="y Position [mm]",
     ))
+end
+
+function plotFreq(meas::Measurement2D)
+    E = calcFieldProportionality2D(transData, frequency)
+    display(plot(meas.freq, E))
 end
 
 
@@ -290,7 +296,7 @@ function calcDeltaS(S_perturbed::ComplexF64, S_unperturbed::ComplexF64)
 end
 
 
-function calcFieldProportionality2D(S_perturbed::Vector{Matrix{ComplexF64}}, frequency::Int64)
+function calcFieldProportionality2D(S_perturbed::Vector{Matrix{ComplexF64}}, frequency::Float64)
     E_data = Matrix{Float64}(undef, vNum, length(posSet))
     S_unperturbed = S_perturbed[frequency][1,1]
     for y in 1:vNum 

@@ -278,39 +278,23 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         
         complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
         
-        
-        #=
-        if i % 2 == 0
-            if (current-1) > length(posSet)
-                error("Measurement points missing: motor speed probably to high")
-            end
-        elseif (current-1) < length(posSet)
-            error("Measurement points missing: motor speed probably to high***2")
-        end
-        
 
-        
-        for j in 1:(length(posSet))
-            println("complexFromTrace")
-            println(complexFromTrace(getTraceFromMemory(socket, j)))
-            push!(S_data, complexFromTrace(getTraceFromMemory(socket, j)))
-
-        end
-       
-        
-        for j in 1:(length(posSet))
-            println("complexFromTrace")
-            S_data_list[j] =  complexFromTrace(getTraceFromMemory(socket, j))
-        end
-        =#
         for x in 1:length(posSet)
             println(y,x)
-            S_params = complexFromTrace(getTraceFromMemory(socket, x))
+            if y % 2 == 0
+                S_params = complexFromTrace(getTraceFromMemory(socket, x))
+                S_data[y, length(posSet) - x + 1] = S_params
+                
+            else
+                S_params = complexFromTrace(getTraceFromMemory(socket, x))
+                S_data[y,x] = S_params
+            end
+                
             
             #println(typeof(S_params))
             #println(typeof(S_data))
             
-            S_data[y,x] = S_params
+           
             
             
         end
