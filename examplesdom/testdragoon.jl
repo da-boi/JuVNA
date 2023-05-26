@@ -18,7 +18,7 @@ devcount, devenum, enumnames =
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
 
-# closeDevice(D[3],D[4])
+closeDevice(D[3],D[4])
 D = D[1:2]
 
 
@@ -62,3 +62,4 @@ trace = nelderMead(b,hist,freqs,
                 showtrace=true,
                 showevery=100,
                 unstuckisiter=true);
+

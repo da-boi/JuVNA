@@ -268,5 +268,5 @@ function findInitPos(booster::PhysicalBooster,freqs,objFunction,n1,n2,dx;
 
     reset ? move(booster,x0) : move(booster,bestpos)
 
-    return bestpos, bestval
+    return bestpos, bestobj
 end
