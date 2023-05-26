@@ -274,21 +274,46 @@ function calcDeltaS(S_perturbed::ComplexF64, S_unperturbed::ComplexF64)
 end
 
 
+function calcFieldProportionality2D(S_perturbed::Matrix{Vector{ComplexF64}}, frequency::Vector{Float64})
+    E_data = Matrix{Float64}()
+    S_unperturbed = S_perturbed[1,1][64]
+    for y in 1:vNum 
+        for x in 1:length(posSet)
+            E_data[x,y] = Float64(sqrt(abs(abs(S_perturbed[x,y][64] - S_unperturbed)) / frequency[64] ))
+        end
+    end
+    
+    return E_data
+end
+
+
 
 function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::ComplexF64, frequency::Float64)
     return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency ))
 end
 
 
-function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
+function calcFieldProportionality(S_perturbed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
     ret = Vector{Float64}(undef, 0)
 
-    for S in S_pertubed
+    for S in S_perturbed
         push!(ret, calcFieldProportionality(S, S_unperturbed, frequency))
     end
 
     return ret
 end
+
+
+function calcFieldProportionality(S_perturbed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
+    ret = Vector{Float64}(undef, 0)
+
+    for S in S_perturbed
+        push!(ret, calcFieldProportionality(S, S_unperturbed, frequency))
+    end
+
+    return ret
+end
+
 
 function calcFieldProportionality(S_perturbed::Vector{ComplexF64}, frequency::Float64)
     ret = Vector{Float64}(undef, 0)
@@ -311,6 +336,7 @@ function calcFieldProportionality(S_perturbed::Matrix{ComplexF64}, frequency::Ve
 end
 
 calcFieldProportionality(meas::Measurement) = calcFieldProportionality(meas.data, meas.freq)
+calcFieldProportionality2D(meas::Measurement2D) = calcFieldProportionality2D(meas.data, meas.freq)
 
 
 function correctPosition(pos::Vector{Float64}, sweepPoints::Integer, sweepTime::Real, motorSpeed::Real)

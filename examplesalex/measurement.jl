@@ -13,6 +13,18 @@ struct Measurement
     pos::Vector{Position}
     posSet::Vector{Integer}
 end
+
+struct Measurement2D
+    label::String
+    param::VNAParameters
+    freq::Vector{Float64}
+    data::Matrix{Vector{ComplexF64}}
+    pos_BIGGER::Vector{Position}
+    pos_BIG::Vector{Position}
+    posSet::Vector{Integer}
+end
+
+
 function saveMeasurement(data; filename::String="", name::String="unnamed", filedate=true)
     if filename == ""
         if filedate date = Dates.format(Dates.now(), "yyyy-mm-dd_") else date = "" end
@@ -152,13 +164,14 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     end
 
 
-    speedReset = getSpeed(D[BiggerChungus])
-    pos_data = Vector{Position}(undef, 0)
+    #speedReset = getSpeed(D[BiggerChungus])
+    pos_data_BIGGER = Vector{Position}(undef, 0)
+    pos_data_BIG = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(vna)
     
     posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
     posSetLen = length(posSet)::Int64
-   
+    S_data = Matrix{Vector{ComplexF64}}(undef, length(posSet), vNum)
            
     for i in BigChungus:BiggerChungus
         
@@ -167,61 +180,69 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         commandWaitForStop(D[i])
         
     end
-    S_data = Matrix{ComplexF64}(undef, sweepPoints, vNum)
+    
 
+    
+    
 
-    for i in 1:vNum
-        println("Runde ", i)
+    for y in 1:vNum
+        println("Runde ", y)
+        currentPos_BIG = getPos(D[BigChungus])
+        push!(pos_data_BIG, currentPos_BIG)
+        #S_data_list = Vector{ComplexF64}(undef, sweepPoints)
+        
         current = 1
-        if i == 1    
+        if y == 1    
             commandMove(D[BiggerChungus], endPos, 0)
             #commandWaitForStop(D[BiggerChungus])
             println("Erster Move")    
 
-        elseif i % 2 == 0
-            commandMove(D[BigChungus], stepSize*i, 0)
+        elseif y % 2 == 0
+            commandMove(D[BigChungus], stepSize*y, 0)
             commandWaitForStop(D[BigChungus])
             println("Geht Runter")
             
             commandMove(D[BiggerChungus],  startPos, 0)
             #commandWaitForStop(D[BiggerChungus])
-            println(i," gerade")
+            println(y," gerade")
 
         else
-            commandMove(D[BigChungus], stepSize*i, 0)
+            commandMove(D[BigChungus], stepSize*y, 0)
             commandWaitForStop(D[BigChungus])
             println("Geht Runter")
 
             commandMove(D[BiggerChungus], endPos, 0)
             #commandWaitForStop(D[BiggerChungus])
-            println(i," ungerade")
+            println(y," ungerade")
         end
     
 
 
         while true
-            currentPos = getPos(D[BiggerChungus])
+            currentPos_BIGGER = getPos(D[BiggerChungus])
             
-            println("current Pos ",currentPos)
+            
+            println("current Pos ",currentPos_BIGGER)
             # Check wether the current position has passed the intended point of measurement.
             # The condition if a point has been passed is dependent on the direction of travel.
 
             
 
-            if i % 2 == 0 
-                println("gerade ",length(posSet))
+            if y % 2 == 0 
+                println("y gerade ")
                 println(current)
-                println(typeof(current))
                 
-                println("Wenn ",currentPos, "kleiner ist als ", Position(posSet[posSetLen-current],0))
-                passed = isSmallerEqPosition(currentPos, Position(posSet[posSetLen-current], 0))
+                println("Wenn ",currentPos_BIGGER, "kleiner gleich ist als ", Position(posSet[length(posSet)+1-current],0))
+                passed = isSmallerEqPosition(currentPos_BIGGER, Position(posSet[length(posSet)+1-current], 0))
+
                 println(passed)
                 println("KLAPPT RÜCKWEG")
+                
             else
                 println("ungerade ",length(posSet))
                 println(current)
                 println(typeof(current))
-                passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
+                passed = isGreaterEqPosition(currentPos_BIGGER, Position(posSet[current], 0))
                 println(passed)
                 println("KLAPPT HINWEG ")
             end
@@ -230,23 +251,23 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
             if passed
                 println("passed ", current)
                 storeTraceInMemory(socket, current)
-                push!(pos_data, currentPos)
+                push!(pos_data_BIGGER, currentPos_BIGGER)
                 current += 1
                 #println(pos_data)
-                if current == length(posSet)   break end
+                if current == length(posSet) +1  break end
             end
             
-            for j in 1:posSetLen
-                deleteTrace(vna, j)
-            end
+           
             # Redundant check if the end has been reached, in case a measurement position lies
             # beyond the end position
             #println("while klappt halb ",currentPos.Position)
             
             #if currentPos.Position == endPos || currentPos.Position == startPos break end
-        end
     
-
+        end
+        
+        
+        
 
         # Read the data from Memory
 
@@ -282,27 +303,51 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
             S_data_list[j] =  complexFromTrace(getTraceFromMemory(socket, j))
         end
         =#
+        for x in 1:length(posSet)
+            println(x,y)
+            S_params = complexFromTrace(getTraceFromMemory(socket, x))
+            
+            println(typeof(S_params))
+            println(typeof(S_data))
+            
+            S_data[x,y] = S_params
+            
+            
+        end
+        #push!(S_data[i], S_data_matrix)
 
-        d = complexFromTrace(getTraceFromMemory(socket, i))
-        
         # println(d)
         # println(size(d))
 
         # push!(S_data_list, complexFromTrace(getTraceFromMemory(socket, 1)))
 
         # println(length(S_data_list))
-        S_data[:,i] =  d
+        
         
 
         # Reform the data to a Matrix{Float64}
-       # S_data = Matrix(reduce(hcat, S_data))
+        # S_data = Matrix(reduce(hcat, S_data))
         
+        #println(S_data)
+        println(typeof(S_data))
+        #deleteTrace(socket, 1)
+
+
+
     end
 
-    return (S_data, f_data, pos_data, posSet)
+    return (S_data, f_data, pos_data_BIGGER, pos_data_BIG, posSet)
 end
     
-    
+
+#Transforming the Maxtrix where each cell contains a vector to a vector containing matricies. 
+function transform(S)
+    transData = Vector{Matrix}(undef, sweepPoints)
+    for i in 1:sweepPoints
+        transData[i] = S[:,:][i]
+    end 
+    return transData
+end
     
 
 
