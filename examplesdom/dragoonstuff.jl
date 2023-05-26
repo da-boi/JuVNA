@@ -224,13 +224,13 @@ end
 function findInitPos(booster::PhysicalBooster,freqs,objFunction,n1,n2,dx;
         start::Union{Nothing,Vector{Float64}}=nothing,home::Int=-1,reset::Bool=false)
 
-    reset && (x0 = copy(booster.pos))
-    
     if home == 0
         homeZero(booster)
     elseif home == 1
         homeHome(booster)
     end
+
+    reset && (x0 = copy(booster.pos))
 
     if start !== nothing
         move(booster,start)
