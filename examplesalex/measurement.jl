@@ -150,7 +150,7 @@ end
 
 
 
-function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000,vNum::Integer=5, sweepPoints::Integer, motorSet::Integer)
+function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=500, speed::Integer=1000, speedSetup::Integer=1000,vNum::Integer=5, sweepPoints::Integer, motorSet::Integer)
     
     if motorSet == 1
         BigChungus = 3
@@ -173,6 +173,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     posSetLen = length(posSet)::Int64
     S_data = Matrix{Vector{ComplexF64}}(undef,  vNum, length(posSet))
            
+    #=
     for i in BigChungus:BiggerChungus
         
         setSpeed(D[i], speedSetup)  
@@ -180,7 +181,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         commandWaitForStop(D[i])
         
     end
-    
+    =#
 
     
     
@@ -298,16 +299,6 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
             
             
         end
-        #push!(S_data[i], S_data_matrix)
-
-        # println(d)
-        # println(size(d))
-
-        # push!(S_data_list, complexFromTrace(getTraceFromMemory(socket, 1)))
-
-        # println(length(S_data_list))
-        
-        
 
         # Reform the data to a Matrix{Float64}
         # S_data = Matrix(reduce(hcat, S_data))
@@ -323,14 +314,23 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     return (S_data, f_data, pos_data_BIGGER, pos_data_BIG, posSet)
 end
     
+function movetonull(startPos::Integer,speedSetup::Integer)
+    for i in 3:4
+        setSpeed(D[i], speedSetup)  
+        commandMove(D[i], startPos, 0) 
+        commandWaitForStop(D[i])
+        
+    end
+end
 
 #Transforming the Maxtrix where each cell contains a vector to a vector containing matricies. 
-function transform(S)
-    transData = [rand(ComplexF64, vNum, length(posSet)) for _ in 1:sweepPoints]
+function transform(data)
+    #transData = [undef, vNum, length(data.posSet) for _ in 1:sweepPoints]
+    transData = [Matrix{ComplexF64}(undef, (vNum, length(data.posSet))) for _ in 1:sweepPoints]
     for f in 1:sweepPoints
         for y in 1:vNum
-            for x in 1:length(posSet)
-                transData[f][y,x] = S[y,x][f]
+            for x in 1:length(data.posSet)
+                transData[f][y,x] = data.data[y,x][f]
             end
         end
         println(f)

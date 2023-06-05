@@ -8,7 +8,7 @@ using ImageMagick
 
 const motorConversionFactor::Float64 = 6 / 500 # mm / step
 
-function plotHeatmap(meas::Measurement; color=:inferno)
+function plotHeatmap(meas::Measurement; color=:jet1)
     E = calcFieldProportionality(meas)
 
     # The position vector
@@ -23,7 +23,6 @@ function plotHeatmap(meas::Measurement; color=:inferno)
         ylabel="Frequency [GHz]",
     ))
 end
-
 
 # selected color schemes for the heatmap
 # :inferno      # suitable for colorblind (default)
@@ -43,27 +42,43 @@ function plot2DHeatmap (meas::Measurement; color=:inferno)
 end
 =#
 
-function plotHeatmap2D(meas::Measurement2D; color=:inferno)
+function plotHeatmap2D(meas::Measurement2D, frequency::Int64; color=:jet1)
     E = calcFieldProportionality2D(transData, frequency)
+    println(E)
 
     # The position vector
     uStep = 256
     stepsX = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 1:Int(length(meas.pos_BIGGER)/vNum)]
     stepsY = [meas.pos_BIG[i].Position + meas.pos_BIG[i].uPosition/uStep for i in eachindex(meas.pos_BIG)]
     x = stepsX .* motorConversionFactor
-    y = stepsY .*motorConversionFactor
+    y = stepsY .* motorConversionFactor
 
     gr()
-    display(heatmap(x, y, E;
+    display(heatmap(x, y, E; aspect_ratio=:equal, clim = (0,8e-7),
         c=color,
         xlabel="x Position [mm]",
         ylabel="y Position [mm]",
+        title = string(round(meas.freq[frequency]*10^-9,digits=2)) * " GHz",
     ))
 end
 
-function plotFreq(meas::Measurement2D)
-    E = calcFieldProportionality2D(transData, frequency)
-    display(plot(meas.freq, E))
+function plotPoints(meas::Measurement2D)
+    E_list=[]
+    for i in 1:sweepPoints
+        E = calcFieldProportionality2D(transData, i)
+        push!(E_list,E)
+    end
+    E_total =transpose((sum(E_list)))
+    uStep = 256
+    stepsX = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 1:Int(length(meas.pos_BIGGER)/vNum)]
+    x = stepsX .* motorConversionFactor
+    
+    display(scatter(x[2:end], E_total[2:end],
+    linestyle = :dot,
+    xlabel="x Position [mm]",
+    ylabel="E [a.u.]",
+    title = "Sum of E-field at central vertical Pos [GHz]" 
+    ))
 end
 
 
@@ -172,6 +187,7 @@ function plotGaussianFit(meas::Measurement; color=:indianred1, xIntervall::Tuple
     return (plotData, plotRes, p, pErr, chiq, ndof)
 
 end
+
 
 function plotGaussianFit(M::Vector{Measurement}; color=:indianred1, xIntervall::Tuple{Real, Real}=(0, 0))
 
@@ -296,12 +312,13 @@ function calcDeltaS(S_perturbed::ComplexF64, S_unperturbed::ComplexF64)
 end
 
 
-function calcFieldProportionality2D(S_perturbed::Vector{Matrix{ComplexF64}}, frequency::Float64)
-    E_data = Matrix{Float64}(undef, vNum, length(posSet))
-    S_unperturbed = S_perturbed[frequency][1,1]
+
+function calcFieldProportionality2D(S_perturbed::Vector{Matrix{ComplexF64}}, freqIndex::Int64)
+    E_data = Matrix{Float64}(undef, vNum, length(data.posSet))
+    S_unperturbed = S_perturbed[freqIndex][1,1]
     for y in 1:vNum 
-        for x in 1:length(posSet)
-            E_data[y,x] = Float64(sqrt(abs(abs(S_perturbed[frequency][y,x] - S_unperturbed)) / frequency ))
+        for x in 1:length(data.posSet)
+            E_data[y,x] = Float64(sqrt(abs(abs(S_perturbed[freqIndex][y,x] - S_unperturbed)) / data.freq[freqIndex] ))
         end
     end
     
@@ -358,7 +375,7 @@ function calcFieldProportionality(S_perturbed::Matrix{ComplexF64}, frequency::Ve
 end
 
 calcFieldProportionality(meas::Measurement) = calcFieldProportionality(meas.data, meas.freq)
-calcFieldProportionality2D(meas::Measurement2D) = calcFieldProportionality2D(transData, frequency)
+
 
 
 function correctPosition(pos::Vector{Float64}, sweepPoints::Integer, sweepTime::Real, motorSpeed::Real)
