@@ -221,10 +221,52 @@ end
 
 
 
-function findInitPos(booster::PhysicalBooster; start::Union{Nothing,Vector{Float64}}=nothing)
+function findInitPos(booster::PhysicalBooster,freqs,objFunction,n1,n2,dx;
+        start::Union{Nothing,Vector{Float64}}=nothing,home::Int=-1,reset::Bool=false)
+
+    if home == 0
+        homeZero(booster)
+    elseif home == 1
+        homeHome(booster)
+    end
+
+    reset && (x0 = copy(booster.pos))
+
     if start !== nothing
         move(booster,start)
     end
 
-    
+    obj = 0
+    bestobj = 0
+    bestpos = zeros(booster.ndisk)
+
+    dx_ = ones(booster.ndisk)*dx
+
+    for _ in 1:n1
+        move(booster,dx_; additive=true)
+        
+        obj = getState(booster,freqs,objFunction).objvalue
+
+        if obj < bestobj
+            bestpos = copy(booster.pos)
+        end
+    end
+
+    move(booster,bestpos)
+
+    dx_ ./= (booster.ndisk:-1:1)
+
+    for _ in 1:n2
+        move(booster,dx_; additive=true)
+        
+        obj = getState(booster,freqs,objFunction).objvalue
+
+        if obj < bestobj
+            bestpos = copy(booster.pos)
+        end
+    end
+
+    reset ? move(booster,x0) : move(booster,bestpos)
+
+    return bestpos, bestobj
 end

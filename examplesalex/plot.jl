@@ -2,7 +2,6 @@ using Plots
 using LaTeXStrings
 import SciPy
 import Printf
-using ImageMagick
 
 # include("measurement.jl")
 

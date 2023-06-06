@@ -18,7 +18,7 @@ devcount, devenum, enumnames =
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
 
-# closeDevice(D[3],D[4])
+closeDevice(D[3],D[4])
 D = D[1:2]
 
 
@@ -45,6 +45,8 @@ move(b,[0.05,0.05]; additive=true)
 
 hist = initHist(b,100,freqs,(getObjAna1d,[]));
 
+findInitPos(b,freqs,(getObjAna1d,[]),10,10,1*:mm)
+
 s = initSimplexCoord(b.pos,0.005)
 getSimplexObj(s,[1,2,3],b,hist,freqs,(getObjAna1d,[]); reset=true)
 
@@ -60,3 +62,4 @@ trace = nelderMead(b,hist,freqs,
                 showtrace=true,
                 showevery=100,
                 unstuckisiter=true);
+

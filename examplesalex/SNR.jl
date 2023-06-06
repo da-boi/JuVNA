@@ -87,7 +87,7 @@ scatter!(power_list, SNR_list, xlabel = "Power Level [dBm]", ylabel = "Signal to
 png("powerComp3_SNR")
 
 data = readMeasurement("2D_CristalRB3-07_SNR_P-3_2023-06-06_1.jld2")
-plotGaussianFit(data, -3)
+plotGaussianFit(data, -7)
 
 
 #dataErdem = readMeasurement("2D_CristalRB3-07_SNR_P7_2023-06-06_1.jld2")
