@@ -172,13 +172,13 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
     posSetLen = length(posSet)::Int64
     S_data = Matrix{Vector{ComplexF64}}(undef,  vNum, length(posSet))
-           
-    #=
+    
+    #=      Für 2D
     for i in BigChungus:BiggerChungus
         
         setSpeed(D[i], speedSetup)  
-        commandMove(D[i], startPos, 0) 
-        commandWaitForStop(D[i])
+        #commandMove(D[i], startPos, 0) #Für 2D wieder verwenden
+        #commandWaitForStop(D[i])       #Für 2D wieder verwenden
         
     end
     =#
@@ -324,7 +324,7 @@ function movetonull(startPos::Integer,speedSetup::Integer)
 end
 
 #Transforming the Maxtrix where each cell contains a vector to a vector containing matricies. 
-function transform(data)
+function transform(data,sweepPoints,vNum,)
     #transData = [undef, vNum, length(data.posSet) for _ in 1:sweepPoints]
     transData = [Matrix{ComplexF64}(undef, (vNum, length(data.posSet))) for _ in 1:sweepPoints]
     for f in 1:sweepPoints

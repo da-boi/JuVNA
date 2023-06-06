@@ -22,7 +22,7 @@ ifbandwidth::Integer = 100e3
 measurement::String = "CH1_S11_1"
 
 vNum = 1
-name::String = "2D_CristalRB3-07_test"
+name::String = "2D_CristalRB3-07_SNR_P0"
 
 motorSet = 1            #1 Dominik ist nicht da  2 Dominik ist da
 
@@ -30,16 +30,20 @@ vna = connectVNA()
 vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweepPoints, ifbandwidth=ifbandwidth)
 
 
-#movetonull(0,2000)
 
-@time S, f, pos_BIGGER, pos_BIG, posSet = twoDMeasurement(vna, 0, 20000; speed=2000, speedSetup=2000, stepSize=500, vNum=vNum, sweepPoints=sweepPoints, motorSet=motorSet)
+
+
+@time S, f, pos_BIGGER, pos_BIG, posSet = twoDMeasurement(vna, 0, 18000; speed=2000, speedSetup=2000, stepSize=500, vNum=vNum, sweepPoints=sweepPoints, motorSet=motorSet)
 
 meas = Measurement2D("", vnaParam, f, S, pos_BIGGER, pos_BIG, posSet)
 saveMeasurement(meas; name=name)
 
 
-data = readMeasurement("2D_CristalRB3-07_test_2023-06-05_1.jld2")
-transData = transform(data)
+data = readMeasurement("2D_CristalRB3-07_SNR_P0_2023-06-06_1.jld2")
+transData = transform(data,sweepPoints,vNum)
+
+plotPoints(data, sweepPoints, vNum, transData)
+plotGaussianFit2D(data, sweepPoints, transData)
 
 
 #Wenn man sich eine bestimmte Frequenz anschauen will
@@ -51,24 +55,21 @@ anim = @animate for freqIndex in 1:sweepPoints
     println(freqIndex)
     
 end
-
 gif(anim, "anim_"*name*".gif", fps = 10)
-
-plotPoints(data)
 
 
 
 
 
 #movetonull(0,2000)
-#commandMove(D[4], 0, 0)
 
 #plotFreq(meas,4)
 #=
-for i in 1:50
+for i in 1:45
     deleteTrace(vna, i)
 end
 =#
+commandMove(D[4], 0, 0)
 closeDevices(D)
 
 

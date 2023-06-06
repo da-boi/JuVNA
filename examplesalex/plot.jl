@@ -43,7 +43,7 @@ end
 =#
 
 function plotHeatmap2D(meas::Measurement2D, frequency::Int64; color=:jet1)
-    E = calcFieldProportionality2D(transData, frequency)
+    E = calcFieldProportionality2D(meas, vNum, transData, i)
     println(E)
 
     # The position vector
@@ -62,13 +62,20 @@ function plotHeatmap2D(meas::Measurement2D, frequency::Int64; color=:jet1)
     ))
 end
 
-function plotPoints(meas::Measurement2D)
+
+
+#--------------------------------- TEST ----------------------------------
+
+
+function plotPoints(meas::Measurement2D, sweepPoints, vNum, transData)
+    
     E_list=[]
     for i in 1:sweepPoints
-        E = calcFieldProportionality2D(transData, i)
+        E = calcFieldProportionality2D(meas, vNum, transData, i)
         push!(E_list,E)
     end
-    E_total =transpose((sum(E_list)))
+
+    E_total = transpose((sum(E_list)))
     uStep = 256
     stepsX = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 1:Int(length(meas.pos_BIGGER)/vNum)]
     x = stepsX .* motorConversionFactor
@@ -81,6 +88,165 @@ function plotPoints(meas::Measurement2D)
     ))
 end
 
+
+
+function plotGaussianFit2D(meas::Measurement2D, sweepPoints, transData; color=:indianred1, xIntervall::Tuple{Real, Real}=(0, 0))
+    # The sum of the field over every frequency
+    E_list=[]
+    for i in 1:sweepPoints
+        E = calcFieldProportionality2D(meas, vNum, transData, i)
+        push!(E_list,E)
+    end
+
+    E = transpose((sum(E_list)))
+    y = dropdims(sum(E, dims=2), dims=2)[begin+1:end]
+
+    # The position vector
+    uStep = 256
+    steps = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in eachindex(meas.pos_BIGGER[begin+1:end])]
+    x = steps .* motorConversionFactor
+
+    # Crop the data to the specified intervall in which the fit is to be performed
+    if xIntervall[begin] == 0 || xIntervall[begin] < x[begin]
+        a = firstindex(x)
+    else
+        a = findnearest(x, xIntervall[begin])
+    end
+    if xIntervall[end] == 0 || xIntervall[end] > x[end]
+        b = lastindex(x)
+    else
+        b = findnearest(x, xIntervall[end])
+    end
+    yCrop = y[a:b]
+    xCrop = x[a:b]
+
+    # Errors on the data 
+    xErr = 0.12
+    yErr = 0.1
+
+    # The gaussian model and the derivative to which the Data is to be fitted
+    # with p0 beeing an initial guess for the coefficients
+    @. gaussian(p, t) = p[1] + p[2]*exp(-(t-p[3])^2 / (2*p[4]^2))
+    @. dGaussian(p, t) = -p[2]/p[4]*abs(t-p[3])*exp(-(t-p[3])^2 / (2*p[4]^2))
+    meanEstimate = xCrop[findmax(yCrop)[2]]
+    p0 = [1.0, 1.0, meanEstimate, 20,]
+
+
+    # fitting
+    model = SciPy.odr.Model(gaussian)
+    data = SciPy.odr.Data(xCrop, yCrop)
+    data = SciPy.odr.RealData(xCrop, yCrop; sx=xErr, sy=yErr)
+    odr = SciPy.odr.ODR(data, model, beta0=p0)
+    output = odr.run()
+
+    # fit results
+    ndof = length(xCrop) - length(p0)
+    chiq = output.res_var*ndof
+    p = output.beta
+    pErr = sqrt.(getDiag(output.cov_beta))
+    fit = gaussian(p, x)
+
+    # Residuals
+    resid = y .- fit
+    resid = resid[a:b]
+    residErr = @. sqrt( ($dGaussian(p, xCrop)*xErr)^2 + yErr^2 )
+
+    
+    ### Plotting the data and fit ###
+    
+    plotData = plot(legend=:topleft)
+
+    # Fit intervall
+    if xIntervall != (0, 0) plotData = vspan!([x[a],x[b]]; color=:gray, alpha=0.2, label="Fit Intervall") end
+
+    # Data points
+    plotData = scatter!(x, y; color=color, markersize=3, label="Data")
+    plotData = plot!(ylabel=L"Sum of Amplitudes [a.u.]")
+
+    # Fit
+    xFit = LinRange(x[begin], x[end], 200)
+    fitCurve = gaussian(p, xFit)
+    label_Fit = L"Fit $\sigma=$" * Printf.@sprintf("%.2f mm",p[4])
+    label_mu = L"$\mu=$" * Printf.@sprintf("%.2f mm",p[3])
+    plotData = plot!(xFit, fitCurve; color=color, label=label_Fit)
+    plotData = vline!([p[3]], color=:royalblue1, linestyle=:dash, label=label_mu)
+
+
+    # Residuals
+    plotRes = hline([0], color=:black)
+    #plotRes = scatter!(xCrop, resid; yerror=residErr, color=:indianred1, markersize=3, legend=false)
+    plotRes = scatter!(xCrop, resid; color=color, markersize=3, legend=false)
+    plotRes = vline!([p[3]], color=:royalblue1, linestyle=:dash)
+    plotRes = plot!(ylabel="Residuals")
+    plotRes = plot!(xlabel="Position [mm]")
+
+    display(plot(plotData, plotRes; layout=grid(2, 1, heights=[3/4, 1/4]), link=:x))
+
+    return (plotData, plotRes, p, pErr, chiq, ndof)
+
+end
+
+
+
+function GaussianFit(meas::Measurement; xIntervall::Tuple{Real, Real}=(0, 0))
+    # The sum of the field over every frequency
+    E = calcFieldProportionality(meas) .*1000
+    y = dropdims(sum(E, dims=2), dims=2)[begin+1:end]
+
+    # The position vector
+    uStep = 256
+    steps = [meas.pos[i].Position + meas.pos[i].uPosition/uStep for i in eachindex(meas.pos[begin+1:end])]
+    x = steps .* motorConversionFactor
+
+    # Crop the data to the specified intervall in which the fit is to be performed
+    if xIntervall[begin] == 0 || xIntervall[begin] < x[begin]
+        a = firstindex(x)
+    else
+        a = findnearest(x, xIntervall[begin])
+    end
+    if xIntervall[end] == 0 || xIntervall[end] > x[end]
+        b = lastindex(x)
+    else
+        b = findnearest(x, xIntervall[end])
+    end
+    yCrop = y[a:b]
+    xCrop = x[a:b]
+
+    # Errors on the data 
+    xErr = 0.12
+    yErr = 0.1
+
+    # The gaussian model and the derivative to which the Data is to be fitted
+    # with p0 beeing an initial guess for the coefficients
+    @. gaussian(p, t) = p[1] + p[2]*exp(-(t-p[3])^2 / (2*p[4]^2))
+    @. dGaussian(p, t) = -p[2]/p[4]*abs(t-p[3])*exp(-(t-p[3])^2 / (2*p[4]^2))
+    meanEstimate = xCrop[findmax(yCrop)[2]]
+    p0 = [1.0, 1.0, meanEstimate, 20,]
+
+
+    # fitting
+    model = SciPy.odr.Model(gaussian)
+    data = SciPy.odr.Data(xCrop, yCrop)
+    data = SciPy.odr.RealData(xCrop, yCrop; sx=xErr, sy=yErr)
+    odr = SciPy.odr.ODR(data, model, beta0=p0)
+    output = odr.run()
+
+    # fit results
+    ndof = length(xCrop) - length(p0)
+    chiq = output.res_var*ndof
+    p = output.beta
+    pErr = sqrt.(getDiag(output.cov_beta))
+    fit = gaussian(p, x)
+
+    # Residuals
+    resid = y .- fit
+    resid = resid[a:b]
+    residErr = @. sqrt( ($dGaussian(p, xCrop)*xErr)^2 + yErr^2 )
+
+    return (p, pErr, chiq, ndof)
+end
+
+#--------------------------------- TEST ----------------------------------
 
 function getDiag(M::Matrix)
     lx = size(M, 1)
@@ -97,7 +263,7 @@ function getDiag(M::Matrix)
     return ret
 end
 
-function plotGaussianFit(meas::Measurement; color=:indianred1, xIntervall::Tuple{Real, Real}=(0, 0))
+function plotGaussianFit(meas::Measurement, power; xIntervall::Tuple{Real, Real}=(0, 0))
 
     # The sum of the field over every frequency
     E = calcFieldProportionality(meas) .*1000
@@ -156,13 +322,13 @@ function plotGaussianFit(meas::Measurement; color=:indianred1, xIntervall::Tuple
     
     ### Plotting the data and fit ###
     
-    plotData = plot(legend=:topleft)
+    #plotData = plot(legend=:topleft)
 
     # Fit intervall
     if xIntervall != (0, 0) plotData = vspan!([x[a],x[b]]; color=:gray, alpha=0.2, label="Fit Intervall") end
 
     # Data points
-    plotData = scatter!(x, y; color=color, markersize=3, label="Data")
+    plotData = scatter!(x, y;  markersize=3, label="Power Level "*string(power))
     plotData = plot!(ylabel=L"Sum of Amplitudes $\cdot 10^{-3}$")
 
     # Fit
@@ -170,21 +336,21 @@ function plotGaussianFit(meas::Measurement; color=:indianred1, xIntervall::Tuple
     fitCurve = gaussian(p, xFit)
     label_Fit = L"Fit $\sigma=$" * Printf.@sprintf("%.2f mm",p[4])
     label_mu = L"$\mu=$" * Printf.@sprintf("%.2f mm",p[3])
-    plotData = plot!(xFit, fitCurve; color=color, label=label_Fit)
+    plotData = plot!(xFit, fitCurve;  label=label_Fit)
     plotData = vline!([p[3]], color=:royalblue1, linestyle=:dash, label=label_mu)
 
 
     # Residuals
     plotRes = hline([0], color=:black)
     #plotRes = scatter!(xCrop, resid; yerror=residErr, color=:indianred1, markersize=3, legend=false)
-    plotRes = scatter!(xCrop, resid; color=color, markersize=3, legend=false)
+    plotRes = scatter!(xCrop, resid;  markersize=3, legend=false)
     plotRes = vline!([p[3]], color=:royalblue1, linestyle=:dash)
     plotRes = plot!(ylabel="Residuals")
     plotRes = plot!(xlabel="Position [mm]")
 
-    display(plot(plotData, plotRes; layout=grid(2, 1, heights=[3/4, 1/4]), link=:x))
+    display(plot!(plotData; layout=grid(2, 1, heights=[3/4, 1/4]), link=:x))
 
-    return (plotData, plotRes, p, pErr, chiq, ndof)
+    return (plotData, p, pErr, chiq, ndof)
 
 end
 
@@ -313,12 +479,12 @@ end
 
 
 
-function calcFieldProportionality2D(S_perturbed::Vector{Matrix{ComplexF64}}, freqIndex::Int64)
-    E_data = Matrix{Float64}(undef, vNum, length(data.posSet))
+function calcFieldProportionality2D(meas, vNum, S_perturbed::Vector{Matrix{ComplexF64}}, freqIndex::Int64)
+    E_data = Matrix{Float64}(undef, vNum, length(meas.posSet))
     S_unperturbed = S_perturbed[freqIndex][1,1]
     for y in 1:vNum 
-        for x in 1:length(data.posSet)
-            E_data[y,x] = Float64(sqrt(abs(abs(S_perturbed[freqIndex][y,x] - S_unperturbed)) / data.freq[freqIndex] ))
+        for x in 1:length(meas.posSet)
+            E_data[y,x] = Float64(sqrt(abs(abs(S_perturbed[freqIndex][y,x] - S_unperturbed)) / meas.freq[freqIndex] ))
         end
     end
     
