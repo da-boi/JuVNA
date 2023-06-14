@@ -107,8 +107,8 @@ end
 
 
 function setPowerLevel(socket::TCPSocket,power::Integer)
-    if power > 5
-        error("Power threshold reached. Must be less than 5 dBm.")
+    if power > 9
+        error("Power threshold reached. Must be less than 9 dBm.")
     end
 
     write(socket,
@@ -522,7 +522,6 @@ function instrumentSimplifiedSetup(socket::TCPSocket;
     setSweepPoints(socket,sweepPoints)
     setIFBandwidth(socket,ifbandwidth)
     setFormat2Log(socket)
-    setMeasurement(socket, measurement)
     setFastSweep(socket, true)
     sweepTime = getSweepTime(socket)
 

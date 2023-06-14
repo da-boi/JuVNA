@@ -1,25 +1,4 @@
 
-# mutable struct Boundaries <: BoundariesType
-#     lo::Float64
-#     hi::Float64
-
-#     function Boundaries()
-#         new(0,0)
-#     end
-
-#     function Boundaries(hi,lo)
-#         new(hi,lo)
-#     end
-# end
-
-# function checkBoundaries(b::Boundaries)
-#     if b.hi < b.lo
-#         error("Boundary failure: hi < lo!")
-#     end
-# end
-
-
-
 
 
 mutable struct Devices <: DevicesType
@@ -47,7 +26,7 @@ import Dragoon: PhysicalBooster
 function PhysicalBooster(devices::Devices; τ::Real=1e-3,ϵ::Real=24,maxlength::Real=2)
 
     b = PhysicalBooster(devices,zeros(length(devices.ids)),length(devices.ids),
-        τ,ϵ,maxlength,0)
+        τ,ϵ,maxlength,0,0)
 
     b.pos = steps2pos(getPos(devices.ids; fmt=Vector),b; outputunit=:m)
 
@@ -96,12 +75,6 @@ function pos2steps(newpos::Vector{Float64},booster::PhysicalBooster;
     return s
 end
 
-# function pos2steps(booster::PhysicalBooster; inputunit=:m)
-#     return @. pos2steps(booster.pos,booster.devices.stagecals,
-#         booster.devices.stagezeros; inputunit=inputunit)
-# end
-
-
 
 function steps2pos(steps::Tuple{Int,Int},
         stagecal::Tuple{Symbol,Float64},
@@ -124,15 +97,6 @@ function steps2pos(steps::Vector{Tuple{Int,Int}},booster::PhysicalBooster;
 
     return p
 end
-
-# function steps2pos(steps::Vector{Tuple{Int,Int}},booster::PhysicalBooster;
-#         outputunit=:m)
-
-#     return @. steps2pos(steps,booster.devices.stagecals,
-#         booster.devices.stagezeros; outputunit=outputunit)
-# end
-
-
 
 
 function getPos(booster::PhysicalBooster)
@@ -186,6 +150,21 @@ function checkCollision(pos::Vector{Float64},newpos::Vector{Float64},
     end
 end
 
+function checkBorders(newpos::Vector{Float64},booster::PhysicalBooster; additive::Bool=false)
+    for i in 1:booster.ndisk
+        if !(booster.devices.stageborders[i][2]*booster.devices.stageborders[i][1] <=
+                booster.pos[i]*additive+newpos[i] <=
+                booster.devices.stageborders[i][3]*booster.devices.stageborders[i][1])
+
+            return true
+        end
+    end
+
+    return false
+end
+
+
+
 
 
 function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}})
@@ -198,30 +177,9 @@ function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}}
     end
 end
 
-# function move(booster::PhysicalBooster,newpos::Vector{Float64};
-#         additive=false, info::Bool=false)
-    
-#     if additive
-#         updatePos!(booster)
+import Dragoon: move
 
-#         checkCollision(booster.pos,newpos,booster; additive=additive) &&
-#             error("Discs are about to collide!")
-
-#         commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
-#         commandWaitForStop(booster.devices.ids)
-
-#         updatePos!(booster)
-#     else
-#         checkCollision(newpos,booster) && error("Discs are about to collide!")
-
-#         booster.pos = copy(newpos)
-        
-#         commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
-#         commandWaitForStop(booster.devices.ids)
-#     end
-# end
-
-function move(booster::PhysicalBooster,newpos::Vector{Float64};
+function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
         additive=false, info::Bool=false)
 
     updatePos!(booster)
@@ -230,6 +188,11 @@ function move(booster::PhysicalBooster,newpos::Vector{Float64};
 
     checkCollision(booster.pos,newpos,booster; additive=additive) &&
         error("Discs are about to collide!")
+
+    checkBorders(newpos,booster;additive=additive) &&
+        error("Discs are about to move out of bounds.")
+
+    checkBorders(newpos,booster)
     
     commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
     commandWaitForStop(booster.devices.ids)
@@ -237,7 +200,12 @@ function move(booster::PhysicalBooster,newpos::Vector{Float64};
     info && println("Finished moving.")
 
     updatePos!(booster)
+    booster.timestamp += 1
 end
+
+
+
+
 
 function homeZero(booster::PhysicalBooster)
     commandMove(booster.devices.ids,zeros(Int32,booster.ndisk,2))
@@ -247,4 +215,58 @@ end
 
 function homeHome(booster::PhysicalBooster)
     return 
+end
+
+
+
+
+
+function findInitPos(booster::PhysicalBooster,freqs,objFunction,n1,n2,dx;
+        start::Union{Nothing,Vector{Float64}}=nothing,home::Int=-1,reset::Bool=false)
+
+    if home == 0
+        homeZero(booster)
+    elseif home == 1
+        homeHome(booster)
+    end
+
+    reset && (x0 = copy(booster.pos))
+
+    if start !== nothing
+        move(booster,start)
+    end
+
+    obj = 0
+    bestobj = 0
+    bestpos = zeros(booster.ndisk)
+
+    dx_ = ones(booster.ndisk)*dx
+
+    for _ in 1:n1
+        move(booster,dx_; additive=true)
+        
+        obj = getState(booster,freqs,objFunction).objvalue
+
+        if obj < bestobj
+            bestpos = copy(booster.pos)
+        end
+    end
+
+    move(booster,bestpos)
+
+    dx_ ./= (booster.ndisk:-1:1)
+
+    for _ in 1:n2
+        move(booster,dx_; additive=true)
+        
+        obj = getState(booster,freqs,objFunction).objvalue
+
+        if obj < bestobj
+            bestpos = copy(booster.pos)
+        end
+    end
+
+    reset ? move(booster,x0) : move(booster,bestpos)
+
+    return bestpos, bestobj
 end
