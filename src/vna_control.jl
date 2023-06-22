@@ -391,6 +391,8 @@ function storeTraceInMemory(socket::TCPSocket, mnum::Integer)
     send(socket, "CALCulate1:MATH:MEMorize;*OPC?\n")
 end
 
+complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
+
 function getTraceFromMemory(socket::TCPSocket, mnum::Integer; delete=true)
     clearBuffer(vna)
 
@@ -423,7 +425,41 @@ function getTraceFromMemory(socket::TCPSocket, mnum::Integer; delete=true)
 
     if delete send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n") end
 
-    return Vector(data)
+    return complexFromTrace(Vector(data))
+end
+
+function getTrace(socket::TCPSocket; waittime=0)
+    clearBuffer(vna)
+
+    send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+    send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+    send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+    send(socket, "CALCulate1:DATA? SDATA\n") # Read the S11 parameter Data
+    # Returns
+    # 1 Byte: Block Data Delimiter '#'
+    # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
+    # n Bytes: N := number of data bytes to read in ASCII
+    # N Bytes: data
+    # 1 Byte: End of line character 0x0A to indicate the end of the data block
+
+    # Wait for the Block Data Delimiter '#'
+    while recv(socket,1)[begin] != 0x23 end
+
+    numofdigitstoread = Int(recv(socket,1))
+
+    numofbytes = Int(recv(socket, numofdigitstoread))
+
+    bytes = recv(socket, numofbytes)
+
+    data = reinterpret(Float64, bytes)
+
+    hanginglinefeed = recv(socket,1)
+    if hanginglinefeed[begin] != 0x0A
+        error("End of Line Character expected to indicate end of data block")
+    end
+
+    return complexFromTrace(Vector(data))
 end
 
 function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
@@ -540,7 +576,8 @@ end
 cals = Dict{Symbol,String}(
     :c3GHz => "{AAE0FD65-EEA1-4D1A-95EE-06B3FFCB32B7}",
     :c300MHz => "{AC488992-4AB2-4EB5-9D23-34EF8774902F}",
-    :c3GHz_NEW => "{2D2A1B51-D3C2-4613-98CC-884561BE4A57}"
+    :c3GHz_NEW => "{2D2A1B51-D3C2-4613-98CC-884561BE4A57}",
+    :c3GHz_9dB => "{483B25B2-6FE9-483E-8A93-0527B8D277E2}"
 )
 
 struct VNAParameters
