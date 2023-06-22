@@ -89,9 +89,7 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
         if currentPos.Position == endPos break end
     end
 
-    println("yeaa")
 
-    # Read the data from Memory
 
     # Reset the speed to the prior speed
     setSpeed(D, speedReset[begin])
@@ -104,6 +102,7 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
         error("Measurement points missing: motor speed probably to high")
     end
 
+    # Read the data from Memory
     for i in 1:(length(posSet))
         push!(S_data, complexFromTrace(getTraceFromMemory(socket, i)))
     end
