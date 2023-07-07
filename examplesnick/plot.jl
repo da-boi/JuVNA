@@ -2,6 +2,7 @@ using Plots
 using LaTeXStrings
 import SciPy
 import Printf
+using StatsBase
 
 # include("measurement.jl")
 
@@ -25,7 +26,42 @@ function plotHeatmap(meas::Measurement; color=:inferno, normalize=false)
 
     display(plot)
     
-    return plot
+    return
+end
+
+function plot2DHeatmap(meas::Measurement2D_; color=:inferno, normalize=false, f=0)
+    E = calcFieldProportionality(meas)
+    if f == 0
+        E = sum(E, dims=3)[:,:,1]
+    else
+        f_index = findnearest(meas.freq, f*1e9)
+        E = E[:,:,f_index]
+    end
+    E = reverse(transpose(E); dims=1)
+
+    # The position vector
+    uStep = 256
+    steps = [meas.pos[i, 1].Position + meas.pos[i, 1].uPosition/uStep for i in eachindex(meas.pos[:, 1])]
+    x = steps .* motorConversionFactor
+    y = meas.posSetY .* motorConversionFactor
+    y .-= maximum(y)
+
+    # x = [i for i in 1:size(E, 1)]
+    # y = [i for i in 1:size(E, 2)]
+    title = "Sum from $(meas.freq[begin]*1e-9) to $(meas.freq[end]*1e-9) GHz"
+    if f != 0 title = L"f = "*Printf.@sprintf("%.2f GHz",meas.freq[f_index]*1e-9) end
+    plot = heatmap(x, y, E;
+        c=color,
+        title=title,
+        xlabel=L"x [\mathrm{mm}]",
+        ylabel=L"y [\mathrm{mm}]"
+        #colorbar_title=L"$F$ [s$^{1/2}$]",
+        # size=(400, 267)
+    )
+
+    display(plot)
+    
+    return
 end
 
 # selected color schemes for the heatmap
@@ -280,6 +316,56 @@ function calcFieldProportionality(S_perturbed::Matrix{ComplexF64}, frequency::Ve
 end
 
 calcFieldProportionality(meas::Measurement; normalize::Bool=false) = calcFieldProportionality(meas.data, meas.freq, meas.param.power; normalize=normalize)
+
+# function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+#     s = (size(meas.data)..., length(meas.freq))
+#     ret = Array{Float64, 3}(undef, s)
+
+#     for k in eachindex(meas.freq)
+#         S_unperturbed = meas.data[1, 1][k]
+#         for j in 1:size(meas.data,2)
+            
+#             for i in 1:size(meas.data,1)
+                
+#                 ret[i, j, k] = calcFieldProportionality(meas.data[i, j][k], S_unperturbed, meas.freq[k], meas.param.power; normalize=normalize)
+#             end
+#         end
+#     end
+
+#     return ret
+# end
+
+function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+    s = (size(meas.data)..., length(meas.freq))
+    ret = Array{Float64, 3}(undef, s)
+
+    for k in eachindex(meas.freq)
+        # S_unperturbed = meas.data[1, 1][k]
+        S_unperturbed = mean([meas.data[begin, begin][k],  meas.data[begin, end][k],  meas.data[begin, end][k],  meas.data[end, end][k]])
+        # S_unperturbed = mean([meas.data[begin, begin][k],  meas.data[begin, end][k]])
+
+
+        for j in 1:size(meas.data, 2), i in 1:size(meas.data, 1)
+            ret[i, j, k] = calcFieldProportionality(meas.data[i, j][k], S_unperturbed, meas.freq[k], meas.param.power)
+
+        end
+    end
+
+    return ret
+end
+
+# function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+#     s = (size(meas.data)..., length(meas.freq))
+#     ret = Array{Float64, 3}(undef, s)
+
+#     for k in eachindex(meas.freq)
+#         for j in 1:size(meas.data,2)
+#             ret[:, j, k] = calcFieldProportionality([e[1] for e in meas.data[:,j]], meas.freq[k], meas.param.power; normalize=normalize)
+#         end
+#     end
+
+#     return ret
+# end
 
 
 function correctPosition(pos::Vector{Float64}, sweepPoints::Integer, sweepTime::Real, motorSpeed::Real)
