@@ -57,6 +57,9 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(socket)
 
+    # delete stray traces from incomplete previous measurements
+    deleteAllTraces(vna) 
+
     # Calculate all the points at which a measurement is to be done
     posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
     current = 1
@@ -88,7 +91,7 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
             storeTraceInMemory(socket, current)
             push!(pos_data, currentPos)
             current += 1
-            if currentPos == length(posSet) + 1 break end
+            if current == length(posSet) + 1 break end
         end
 
         # Redundant check if the end has been reached, in case a measurement position lies
@@ -96,21 +99,20 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
         if currentPos.Position == endPos break end
     end
 
-    # Read the data from Memory
+
 
     # Reset the speed to the prior speed
     setSpeed(D, speedReset[begin])
 
     S_data = Vector{Vector{ComplexF64}}(undef, 0)
 
-    complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
-
     if (current-1) < length(posSet)
         error("Measurement points missing: motor speed probably to high")
     end
 
+    # Read the data from Memory
     for i in 1:(length(posSet))
-        push!(S_data, complexFromTrace(getTraceFromMemory(socket, i)))
+        push!(S_data, getTraceFromMemory(socket, i))
     end
 
     # Reform the data to a Matrix{Float64}
@@ -198,6 +200,8 @@ function get2DMeasurement(socket::TCPSocket, D::Vector{DeviceId}, startPos::Tupl
 end
 
 function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000)
+    setMeasurement(vna, "CH1_S11_1")
+    
     S_data = Vector{Vector{ComplexF64}}(undef, 0)
     pos_data = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(socket)
@@ -206,7 +210,7 @@ function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Int
     posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
 
     # Move to starting Position
-    setSpeed(D, 1000)
+    setSpeed(D, speed)
     commandMove(D, startPos, 0)
     commandWaitForStop(D)
 
@@ -214,7 +218,7 @@ function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Int
     for x in posSet
         commandMove(D, x, 0)
         commandWaitForStop(D)
-        push!(S_data, getDataAsBinBlockTransfer(socket))
+        push!(S_data, getTrace(socket))
         push!(pos_data, Position(x, 0))
     end
 
