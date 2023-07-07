@@ -12,14 +12,14 @@ D = D[4]
 
 
 ### Connect to the VNA ###
-power=-20
+power=9
 f_center::Float64 = 20e9
 f_span::Float64 = 3e9
 sweepPoints::Integer = 128
 ifbandwidth::Integer = 100e3
 
 vna = connectVNA()
-vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweeppoints, ifbandwidth=ifbandwidth)
+vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_9dB], power=power, center=f_center, span=f_span, sweepPoints=sweepPoints, ifbandwidth=ifbandwidth)
 
 ### Perform measurements
 startPos = 0
@@ -32,8 +32,10 @@ reps = 1
 speed = 2000
 for i in 1:reps
     @time S, f, pos, posSet = getContinousMeasurement(vna, startPos, endPos; speed=speed, speedSetup=2000, stepSize=stepSize)
+    # @time S, f, pos, posSet = getSteppedMeasurement(vna, startPos, endPos; stepSize=stepSize)
     meas = Measurement("", vnaParam, f, S, pos, posSet)
     saveMeasurement(meas; name="../beadpull/c2000_black150_cc3300")
+    plotGaussianFit(meas)
 end
 
 # stepped measurement
@@ -43,7 +45,7 @@ end
 #     saveMeasurement(meas; name="../beadpull/s_black150_al3180")
 # end
 
-meas = readMeasurement("../beadpull/c2000_black150_cc3300_2023-06-14_10.jld2")
+meas = readMeasurement("../beadpull/c2000_black150_cc3300_2023-06-22_1.jld2")
 
 plotHeatmap(meas)
 plotGaussianFit(meas)

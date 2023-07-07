@@ -504,6 +504,7 @@ function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     end
 end
 
+getFrequencies(socket::TCPSocket) = getFreqAsBinBlockTransfer(socket)
 
 # combined functions for convenience
 
