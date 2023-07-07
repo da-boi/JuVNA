@@ -13,6 +13,16 @@ struct Measurement
     posSet::Vector{Integer}
 end
 
+struct Measurement2D
+    label::String
+    param::VNAParameters
+    speed::Integer
+    freq::Vector{Float64}
+    data::Matrix{Vector{ComplexF64}}
+    pos::Matrix{Position}
+    posSet::Matrix{Integer}
+end
+
 function saveMeasurement(data; filename::String="", name::String="unnamed", filedate=true)
     if filename == ""
         if filedate date = Dates.format(Dates.now(), "yyyy-mm-dd_") else date = "" end
@@ -107,6 +117,84 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
 
     # Reform the data to a Matrix{Float64}
     S_data = Matrix(reduce(hcat, S_data))
+
+    return (S_data, f_data, pos_data, posSet)
+end
+
+function get2DMeasurement(socket::TCPSocket, D::Vector{DeviceId}, startPos::Tuple{Integer}, endPos::Tuple{Integer}; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
+    S_data = Matrix{Vector{ComplexF64}}(undef, 0)
+    pos_data = Matrix{Position}(undef, 0)
+    f_data = getFreqAsBinBlockTransfer(socket)
+
+    # Calculate all the points at which a measurement is to be done
+    posSetX = getMeasurementPositions(startPos[1], endPos[1]; stepSize=stepSize)
+    posSetY = getMeasurementPositions(startPos[2], endPos[2]; stepSize=stepSize)
+    current = 1
+
+    # Move to starting Position
+    commandMove(D, startPos)
+    commandWaitForStop(D)
+
+    # Start the measuring movement
+    setSpeed(D, speed)
+
+    for y in posSetY
+        
+        # Move Y-axis to next position
+        commandMove(D[2], y; info=true)
+        commandWaitForStop(D[2])
+
+        # start scan
+        if getPos(D[1]) == startPos[1] direction = true end
+
+        if direction
+            commandMove(D[1], endPos[1], 0)
+        else
+            commandMove(D[1], startPos[1], 0)
+        end
+
+        posX_data = Vector{Position}(undef, 0)
+        SX_data = Vector{Position}(undef, 0)
+
+        while true
+            currentPos = getPos(D[1])
+
+            # Check wether the current position has passed the intended point of measurement.
+            # The condition if a point has been passed is dependent on the direction of travel.
+            if endPos > startPos
+                passed = isGreaterEqPosition(currentPos, Position(posSetX[current], 0))
+            else
+                passed = isGreaterEqPosition(Position(posSetX[current], 0), currentPos)
+            end
+
+            # If a point has been passed, perform a measurement
+            if passed
+                storeTraceInMemory(socket, current)
+                push!(posX_data, currentPos)
+                current += 1
+                if currentPos == length(posSet) + 1 break end
+            end
+
+            # Redundant check if the end has been reached, in case a measurement position lies
+            # beyond the end position
+            if currentPos.Position == endPos break end
+        end
+
+        # Read the data from Memory
+        SX_data = Vector{Vector{ComplexF64}}(undef, 0)
+
+        complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
+
+        for i in 1:(length(posSet))
+            push!(SX_data, complexFromTrace(getTraceFromMemory(socket, i)))
+        end
+
+        if direction SX_data = reverse(SX_data) end
+
+        S_data = vcat(S_data, SX_data)
+        pos_data = vcat(pos_data, posX_data)
+
+    end
 
     return (S_data, f_data, pos_data, posSet)
 end

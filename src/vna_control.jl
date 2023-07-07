@@ -271,6 +271,13 @@ function getSweepTime(socket::TCPSocket)
     return Float64(bytes)
 end
 
+function getSweepStartTime(socket::TCPSocket)
+    clearBuffer(socket)
+    send(socket, "SENSe:SWEep:TIME?\n")
+    bytes = recv(socket)
+    return Float64(bytes)
+end
+
 import Core: Int, Float64
 
 Core.Int(data::Array{UInt8}) = parse(Int, String(data))
