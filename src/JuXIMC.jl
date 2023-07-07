@@ -451,6 +451,12 @@ function setSpeed(device::DeviceId,speed::Integer; info=false)
     info && println("Write command result: "*string(result))
 end
 
+function setSpeed(device::Vector{DeviceId}, speed::Integer; info=false)
+    for D in device
+        setSpeed(D, speed; info)
+    end
+end
+
 function getEngineSettings(device::DeviceId)
     eng = engine_settings_t()
 

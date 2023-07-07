@@ -45,3 +45,7 @@ for i in 1:reps
     meas = Measurement("", vnaParam, f, S, pos, posSet)
     saveMeasurement(meas; name="step_black150_al3500")
 end
+
+
+plotHeatmap(meas)
+plotGaussianFit(meas)
