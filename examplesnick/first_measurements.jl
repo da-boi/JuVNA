@@ -24,26 +24,31 @@ vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_9dB], power=power,
 
 ### Perform measurements
 startPos = 0
-endPos = 24000
+endPos = 24880
 stepSize = 250
-reps = 1
+reps = 10
 
-D = DX
 # continous measurement
-speed = 2000
+speed = [1000, 2000, 3200]
+speed = reverse(speed)
 # for power in [-20, -15, -10, -5, 0, 5, 9]
-for i in 1:3
-    @time S, f, pos, posSet = getContinousMeasurement(vna, startPos, endPos; speed=speed, speedSetup=2000, stepSize=stepSize)
-    # @time S, f, pos, posSet = getSteppedMeasurement(vna, startPos, endPos; stepSize=stepSize)
-    meas = Measurement("", vnaParam, f, S, pos, posSet)
-    saveMeasurement(meas; name="../beadpull/method/c"*string(speed)*"_black150_cc3300_"*string(power)*"dB")
-    plotGaussianFit(meas)
+for s in speed
+    for i in 1:reps
+        @time S, f, pos, posSet = getContinousMeasurement(vna, DX, startPos, endPos; speed=s, speedSetup=2000, stepSize=stepSize)
+        meas = Measurement("", vnaParam, f, S, pos, posSet)
+        saveMeasurement(meas; name="../beadpull/direction/c"*string(s)*"_forward_black150_cc3300_9dBm")
+        if i == 1 plotGaussianFit(meas) end
+        @time S, f, pos, posSet = getContinousMeasurement(vna, DX, endPos, startPos; speed=s, speedSetup=2000, stepSize=stepSize)
+        meas = Measurement("", vnaParam, f, S, pos, posSet)
+        saveMeasurement(meas; name="../beadpull/direction/c"*string(s)*"_backward_black150_cc3300_9dBm")
+        if i == 1 plotGaussianFit(meas) end
+    end
 end
 
-D = [DX, DY]
-startPos = [0, 0]
-endPos = [24880, 18000]
-@time S, f, pos, posSetX, posSetY = get2DMeasurement(vna, D, startPos, endPos; speed=3200, speedSetup=2000, stepSizeX=500, stepSizeY=500)
+# D = [DX, DY]
+# startPos = [0, 0]
+# endPos = [24880, 18000]
+# @time S, f, pos, posSetX, posSetY = get2DMeasurement(vna, D, startPos, endPos; speed=3200, speedSetup=2000, stepSizeX=500, stepSizeY=500)
 
-M = Measurement2D_("", vnaParam, 2000, f, S, pos, posSetX, posSetY)
-saveMeasurement(M; name="../beadpull/twoD/c3200_black150_cc3300")
+# M = Measurement2D_("", vnaParam, 2000, f, S, pos, posSetX, posSetY)
+# saveMeasurement(M; name="../beadpull/twoD/c3200_black150_cc3300")

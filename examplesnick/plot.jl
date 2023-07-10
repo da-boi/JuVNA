@@ -29,7 +29,7 @@ function plotHeatmap(meas::Measurement; color=:inferno, normalize=false)
     return
 end
 
-function plot2DHeatmap(meas::Measurement2D_; color=:inferno, normalize=false, f=0)
+function plot2DHeatmap(meas::Measurement2D; color=:inferno, normalize=false, f=0)
     E = calcFieldProportionality(meas)
     if f == 0
         E = sum(E, dims=3)[:,:,1]
@@ -275,7 +275,7 @@ end
 
 ### Analysis ###
 
-function dBm2mW(dBm::Real)
+function dBm2W(dBm::Real)
     return 10^(dBm/10)*1e-3
 end
 
@@ -317,7 +317,7 @@ end
 
 calcFieldProportionality(meas::Measurement; normalize::Bool=false) = calcFieldProportionality(meas.data, meas.freq, meas.param.power; normalize=normalize)
 
-# function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+# function calcFieldProportionality(meas::Measurement2D; normalize::Bool=false)
 #     s = (size(meas.data)..., length(meas.freq))
 #     ret = Array{Float64, 3}(undef, s)
 
@@ -335,7 +335,7 @@ calcFieldProportionality(meas::Measurement; normalize::Bool=false) = calcFieldPr
 #     return ret
 # end
 
-function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+function calcFieldProportionality(meas::Measurement2D; normalize::Bool=false)
     s = (size(meas.data)..., length(meas.freq))
     ret = Array{Float64, 3}(undef, s)
 
@@ -354,7 +354,7 @@ function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
     return ret
 end
 
-# function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+# function calcFieldProportionality(meas::Measurement2D; normalize::Bool=false)
 #     s = (size(meas.data)..., length(meas.freq))
 #     ret = Array{Float64, 3}(undef, s)
 

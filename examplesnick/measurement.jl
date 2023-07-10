@@ -13,7 +13,7 @@ struct Measurement
     posSet::Vector{Integer}
 end
 
-struct Measurement2D_
+struct Measurement2D
     label::String
     param::VNAParameters
     speed::Integer
@@ -114,6 +114,63 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
     # Read the data from Memory
     for i in 1:(length(posSet))
         push!(S_data, getTraceFromMemory(socket, i))
+    end
+
+    # Reform the data to a Matrix{Float64}
+    S_data = Matrix(reduce(hcat, S_data))
+
+    return (S_data, f_data, pos_data, posSet)
+end
+
+function getContinousMeasurement(socket::TCPSocket, D::DeviceId, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
+    # Calculate all the points at which a measurement is to be done
+    posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
+
+    S_data = Vector{Vector{ComplexF64}}(undef, length(posSet))
+    pos_data = Vector{Position}(undef, length(posSet))
+    f_data = getFreqAsBinBlockTransfer(socket)
+
+    # Move to starting Position
+    commandMove(D, startPos, 0)
+    commandWaitForStop(D)
+
+    setSpeed(D, speed)
+
+    # initial direction
+    direction = startPos <= endPos
+
+    commandMove(D, endPos, 0)
+
+    current = 1
+    while true
+        currentPos = getPos(D)
+
+        # Check wether the current position has passed the intended point of measurement.
+        # The condition if a point has been passed is dependent on the direction of travel.
+        if direction
+            passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
+        else
+            passed = isSmallerEqPosition(currentPos, Position(posSet[current], 0))
+            if passed println(currentPos) end
+        end
+
+        # If a point has been passed, perform a measurement
+        if passed
+            storeTraceInMemory(socket, current)
+            pos_data[current] = currentPos
+            if current == length(posSet) break end
+            current += 1
+        end
+    end
+
+    for i in 1:length(posSet)
+        S_data[i] = getTraceFromMemory(socket, i)
+    end
+
+    if !direction
+        S_data = reverse(S_data)
+        pos_data = reverse(pos_data)
+        posSet = reverse(posSet)
     end
 
     # Reform the data to a Matrix{Float64}
@@ -235,55 +292,3 @@ function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Int
 
     return (S_data, f_data, pos_data, posSet)
 end
-
-#=
-function getContinousMeasurement(startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
-    S_data = Vector{Vector{ComplexF64}}(undef, 0)
-    pos_data = Vector{Position}(undef, 0)
-    f_data = getFreqAsBinBlockTransfer(vna)
-
-    # Calculate all the points at which a measurement is to be done
-    posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
-    current = 1
-
-    # Move to starting Position
-    # speedSetup can be higher than the measuring speed
-    setSpeed(D, speedSetup)
-    commandMove(D, startPos, 0)
-    commandWaitForStop(D)
-
-    # Start the measuring movement
-    setSpeed(D, speed)
-    commandMove(D, endPos, 0)
-
-    while true
-        currentPos = getPos(D)
-
-        # Check wether the current position has passed the intended point of measurement.
-        # The condition if a point has been passed is dependent on the direction of travel.
-        if endPos > startPos
-            passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
-        else
-            passed = isGreaterEqPosition(Position(posSet[current], 0), currentPos)
-        end
-
-        # If a point has been passed, perform a measurement
-        if passed
-            push!(S_data, getDataAsBinBlockTransfer(vna))
-            push!(pos_data, currentPos)
-            println(currentPos)
-            current += 1
-            if currentPos == length(posSet) + 1 break end
-        end
-
-        # Redundant check if the end has been reached, in case a measurement position lies
-        # beyond the end position
-        if currentPos.Position == endPos break end
-    end
-
-    # Reform the data to a Matrix{Float64}
-    S_data = Matrix(reduce(hcat, S_data))
-
-    return (S_data, f_data, pos_data, posSet)
-end
-=#
