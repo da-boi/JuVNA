@@ -213,7 +213,7 @@ function commandMove(device::DeviceId,pos::Int32,upos::Int32; info=false)
     return result
 end
 
-const commandMove(device::DeviceId,pos::Real,upos::Real) = commandMove(device,Int32(pos),Int32(upos))
+const commandMove(device::DeviceId,pos::Real,upos::Real; info=false) = commandMove(device,Int32(pos),Int32(upos); info=info)
 
 function commandMove(device::DeviceId,pos::Position; info=false)
     info && println("\nGoing to $pos, $upos")

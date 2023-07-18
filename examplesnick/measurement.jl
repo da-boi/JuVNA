@@ -20,7 +20,8 @@ struct Measurement2D
     freq::Vector{Float64}
     data::Matrix{Vector{ComplexF64}}
     pos::Matrix{Position}
-    posSet::Matrix{Integer}
+    posSetX::Vector{Integer}
+    posSetY::Vector{Integer}
 end
 
 function saveMeasurement(data; filename::String="", name::String="unnamed", filedate=true)
@@ -85,7 +86,7 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
         else
             passed = isGreaterEqPosition(Position(posSet[current], 0), currentPos)
         end
-
+        
         # If a point has been passed, perform a measurement
         if passed
             storeTraceInMemory(socket, current)
@@ -121,58 +122,121 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
     return (S_data, f_data, pos_data, posSet)
 end
 
-function get2DMeasurement(socket::TCPSocket, D::Vector{DeviceId}, startPos::Tuple{Integer}, endPos::Tuple{Integer}; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
-    S_data = Matrix{Vector{ComplexF64}}(undef, 0)
-    pos_data = Matrix{Position}(undef, 0)
+function getContinousMeasurement(socket::TCPSocket, D::DeviceId, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
+    # Calculate all the points at which a measurement is to be done
+    posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
+
+    S_data = Vector{Vector{ComplexF64}}(undef, length(posSet))
+    pos_data = Vector{Position}(undef, length(posSet))
     f_data = getFreqAsBinBlockTransfer(socket)
 
-    # Calculate all the points at which a measurement is to be done
-    posSetX = getMeasurementPositions(startPos[1], endPos[1]; stepSize=stepSize)
-    posSetY = getMeasurementPositions(startPos[2], endPos[2]; stepSize=stepSize)
-    current = 1
-
     # Move to starting Position
-    commandMove(D, startPos)
+    commandMove(D, startPos, 0)
     commandWaitForStop(D)
 
-    # Start the measuring movement
     setSpeed(D, speed)
 
+    # initial direction
+    direction = startPos <= endPos
+
+    commandMove(D, endPos, 0)
+
+    current = 1
+    while true
+        currentPos = getPos(D)
+
+        # Check wether the current position has passed the intended point of measurement.
+        # The condition if a point has been passed is dependent on the direction of travel.
+        if direction
+            passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
+        else
+            passed = isSmallerEqPosition(currentPos, Position(posSet[current], 0))
+            if passed println(currentPos) end
+        end
+
+        # If a point has been passed, perform a measurement
+        if passed
+            storeTraceInMemory(socket, current)
+            pos_data[current] = currentPos
+            if current == length(posSet) break end
+            current += 1
+        end
+    end
+
+    for i in 1:length(posSet)
+        S_data[i] = getTraceFromMemory(socket, i)
+    end
+
+    if !direction
+        S_data = reverse(S_data)
+        pos_data = reverse(pos_data)
+        posSet = reverse(posSet)
+    end
+
+    # Reform the data to a Matrix{Float64}
+    S_data = Matrix(reduce(hcat, S_data))
+
+    return (S_data, f_data, pos_data, posSet)
+end
+
+function get2DMeasurement(socket::TCPSocket, D::Vector{DeviceId}, startPos::Vector{Int}, endPos::Vector{Int}; stepSizeX::Integer=250, stepSizeY::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
+    # Calculate all the points at which a measurement is to be done
+    posSetX = getMeasurementPositions(startPos[1], endPos[1]; stepSize=stepSizeX)
+    posSetXReverse = reverse(posSetX)
+    posSetY = getMeasurementPositions(startPos[2], endPos[2]; stepSize=stepSizeY)
+
+    S_data = Matrix{Vector{ComplexF64}}(undef, (length(posSetX), length(posSetY)))
+    pos_data = Matrix{Position}(undef, (length(posSetX), length(posSetY)))
+    f_data = getFreqAsBinBlockTransfer(socket)
+
+    DX, DY = D
+
+    # Move to starting Position
+    commandMove(DX, startPos[1], 0)
+    commandMove(DY, startPos[2], 0)
+    commandWaitForStop(D)
+
+    setSpeed(D, speed)
+
+    # initial direction
+    direction = true
+
+    currentY = 1
     for y in posSetY
         
         # Move Y-axis to next position
-        commandMove(D[2], y; info=true)
-        commandWaitForStop(D[2])
-
-        # start scan
-        if getPos(D[1]) == startPos[1] direction = true end
+        commandMove(DY, y, 0)
+        println("Current Row: $(currentY) of $(length(posSetY))")
+        commandWaitForStop(DY)
 
         if direction
-            commandMove(D[1], endPos[1], 0)
+            commandMove(DX, endPos[1], 0)
         else
-            commandMove(D[1], startPos[1], 0)
+            commandMove(DX, startPos[1], 0)
         end
 
         posX_data = Vector{Position}(undef, 0)
         SX_data = Vector{Position}(undef, 0)
 
+        currentX = 1
         while true
             currentPos = getPos(D[1])
 
             # Check wether the current position has passed the intended point of measurement.
             # The condition if a point has been passed is dependent on the direction of travel.
-            if endPos > startPos
-                passed = isGreaterEqPosition(currentPos, Position(posSetX[current], 0))
+            if direction
+                passed = isGreaterEqPosition(currentPos, Position(posSetX[currentX], 0))
             else
-                passed = isGreaterEqPosition(Position(posSetX[current], 0), currentPos)
+                passed = isSmallerEqPosition(currentPos, Position(posSetXReverse[currentX], 0))
             end
 
             # If a point has been passed, perform a measurement
             if passed
-                storeTraceInMemory(socket, current)
-                push!(posX_data, currentPos)
-                current += 1
-                if currentPos == length(posSet) + 1 break end
+                storeTraceInMemory(socket, currentX)
+                # push!(posX_data, currentPos)
+                pos_data[currentX, currentY] = currentPos
+                currentX += 1
+                if currentX == length(posSetX) + 1 break end
             end
 
             # Redundant check if the end has been reached, in case a measurement position lies
@@ -180,23 +244,24 @@ function get2DMeasurement(socket::TCPSocket, D::Vector{DeviceId}, startPos::Tupl
             if currentPos.Position == endPos break end
         end
 
-        # Read the data from Memory
-        SX_data = Vector{Vector{ComplexF64}}(undef, 0)
-
-        complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
-
-        for i in 1:(length(posSet))
-            push!(SX_data, complexFromTrace(getTraceFromMemory(socket, i)))
+        for i in 1:(length(posSetX))
+            # push!(SX_data, getTraceFromMemory(socket, i))
+            S_data[i, currentY] = getTraceFromMemory(socket, i)
         end
 
-        if direction SX_data = reverse(SX_data) end
+        if !direction
+            S_data[:,currentY] = reverse(S_data[:,currentY])
+            pos_data[:,currentY] = reverse(pos_data[:,currentY])
+        end
 
-        S_data = vcat(S_data, SX_data)
-        pos_data = vcat(pos_data, posX_data)
+        # change measuring direction
+        direction = !direction
+
+        currentY += 1
 
     end
 
-    return (S_data, f_data, pos_data, posSet)
+    return (S_data, f_data, pos_data, posSetX, posSetY)
 end
 
 function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000)
@@ -227,55 +292,3 @@ function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Int
 
     return (S_data, f_data, pos_data, posSet)
 end
-
-#=
-function getContinousMeasurement(startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
-    S_data = Vector{Vector{ComplexF64}}(undef, 0)
-    pos_data = Vector{Position}(undef, 0)
-    f_data = getFreqAsBinBlockTransfer(vna)
-
-    # Calculate all the points at which a measurement is to be done
-    posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
-    current = 1
-
-    # Move to starting Position
-    # speedSetup can be higher than the measuring speed
-    setSpeed(D, speedSetup)
-    commandMove(D, startPos, 0)
-    commandWaitForStop(D)
-
-    # Start the measuring movement
-    setSpeed(D, speed)
-    commandMove(D, endPos, 0)
-
-    while true
-        currentPos = getPos(D)
-
-        # Check wether the current position has passed the intended point of measurement.
-        # The condition if a point has been passed is dependent on the direction of travel.
-        if endPos > startPos
-            passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
-        else
-            passed = isGreaterEqPosition(Position(posSet[current], 0), currentPos)
-        end
-
-        # If a point has been passed, perform a measurement
-        if passed
-            push!(S_data, getDataAsBinBlockTransfer(vna))
-            push!(pos_data, currentPos)
-            println(currentPos)
-            current += 1
-            if currentPos == length(posSet) + 1 break end
-        end
-
-        # Redundant check if the end has been reached, in case a measurement position lies
-        # beyond the end position
-        if currentPos.Position == endPos break end
-    end
-
-    # Reform the data to a Matrix{Float64}
-    S_data = Matrix(reduce(hcat, S_data))
-
-    return (S_data, f_data, pos_data, posSet)
-end
-=#
