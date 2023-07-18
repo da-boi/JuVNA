@@ -107,7 +107,7 @@ end
 
 
 function setPowerLevel(socket::TCPSocket,power::Integer)
-    if power > 9
+    if power > 14
         error("Power threshold reached. Must be less than 9 dBm.")
     end
 

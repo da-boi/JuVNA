@@ -20,7 +20,7 @@ ifbandwidth::Integer = 100e3
 
 vna = connectVNA()
 vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweeppoints, ifbandwidth=ifbandwidth)
-vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweeppoints, ifbandwidth=ifbandwidth)
+#vnaParam = instrumentSimplifiedSetup(vna; calName=cals[:c3GHz_NEW], power=power, center=f_center, span=f_span, sweepPoints=sweeppoints, ifbandwidth=ifbandwidth)
 
 ### Perform measurements
 startPos = 0
@@ -35,9 +35,12 @@ for i in 1:reps
     commandMove(D, startPos, 0)
     @time S, f, pos, posSet = getContinousMeasurement(vna, startPos, endPos; speed=speed, speedSetup=2000, stepSize=stepSize)
     meas = Measurement("", vnaParam, f, S, pos, posSet)
-    saveMeasurement(meas; name="cont_black150_al3500")
+    saveMeasurement(meas; name="Test_newMirror_Alu")
 end
 
+
+
+#=
 # stepped measurement
 for i in 1:reps
     commandMove(D, startPos, 0)
@@ -45,3 +48,5 @@ for i in 1:reps
     meas = Measurement("", vnaParam, f, S, pos, posSet)
     saveMeasurement(meas; name="step_black150_al3500")
 end
+
+=#

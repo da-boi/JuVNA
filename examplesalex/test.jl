@@ -179,8 +179,6 @@ end
 
 
 
-
-
 #=
 
 def measurement():

@@ -105,14 +105,15 @@ function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::I
 
     S_data = Vector{Vector{ComplexF64}}(undef, 0)
 
-    complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
+    #complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
 
     if (current-1) < length(posSet)
         error("Measurement points missing: motor speed probably to high")
     end
 
     for i in 1:(length(posSet))
-        push!(S_data, complexFromTrace(getTraceFromMemory(socket, i)))
+        # push!(S_data, complexFromTrace(getTraceFromMemory(socket, i)))
+        push!(S_data, getTraceFromMemory(socket, i))
     end
 
     # Reform the data to a Matrix{Float64}
@@ -150,7 +151,7 @@ end
 
 
 
-function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=500, speed::Integer=1000, speedSetup::Integer=1000,vNum::Integer=5, sweepPoints::Integer, motorSet::Integer)
+function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=500, speed::Integer=1000, speedSetup::Integer=1000,res::Integer=5, sweepPoints::Integer, motorSet::Integer)
     
     if motorSet == 1
         BigChungus = 3
@@ -162,8 +163,12 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         println("Error flasche Auswahl")
         return 
     end
+    stepSize = res*100
+    vNum = 16000/stepSize
 
-
+    if res < 31
+        println("Resolution is too low, choose a number between 1 - 30 ")
+    end
     #speedReset = getSpeed(D[BiggerChungus])
     pos_data_BIGGER = Vector{Position}(undef, 0)
     pos_data_BIG = Vector{Position}(undef, 0)
@@ -173,15 +178,15 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
     posSetLen = length(posSet)::Int64
     S_data = Matrix{Vector{ComplexF64}}(undef,  vNum, length(posSet))
     
-    #=      Für 2D
+    #      Für 2D
     for i in BigChungus:BiggerChungus
         
         setSpeed(D[i], speedSetup)  
-        #commandMove(D[i], startPos, 0) #Für 2D wieder verwenden
-        #commandWaitForStop(D[i])       #Für 2D wieder verwenden
+        commandMove(D[i], startPos, 0) #Für 2D wieder verwenden
+        commandWaitForStop(D[i])       #Für 2D wieder verwenden
         
     end
-    =#
+    
 
     
     
@@ -277,17 +282,18 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
 
         
         
-        complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
+        #complexFromTrace(data::Vector{Float64}) = data[1:2:end] .+ data[2:2:end]*im
         
 
         for x in 1:length(posSet)
             println(y,x)
             if y % 2 == 0
-                S_params = complexFromTrace(getTraceFromMemory(socket, x))
+                S_params = getTraceFromMemory(socket, x)
+                
                 S_data[y, length(posSet) - x + 1] = S_params
                 
             else
-                S_params = complexFromTrace(getTraceFromMemory(socket, x))
+                S_params = getTraceFromMemory(socket, x)
                 S_data[y,x] = S_params
             end
                 

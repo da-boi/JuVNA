@@ -1,6 +1,6 @@
 using Plots
 using LaTeXStrings
-import SciPy
+using SciPy
 import Printf
 
 # include("measurement.jl")
@@ -42,9 +42,8 @@ end
 =#
 
 function plotHeatmap2D(meas::Measurement2D, frequency::Int64; color=:jet1)
-    E = calcFieldProportionality2D(meas, vNum, transData, i)
-    println(E)
-
+    E = calcFieldProportionality2D(meas, vNum, transData, frequency)
+    
     # The position vector
     uStep = 256
     stepsX = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 1:Int(length(meas.pos_BIGGER)/vNum)]
@@ -265,7 +264,7 @@ end
 function plotGaussianFit(meas::Measurement, power; xIntervall::Tuple{Real, Real}=(0, 0))
 
     # The sum of the field over every frequency
-    E = calcFieldProportionality(meas) .*1000
+    E = calcFieldProportionality(meas)*sqrt(10^(power/10)/1000) .*1000
     y = dropdims(sum(E, dims=2), dims=2)[begin+1:end]
 
     # The position vector
@@ -493,9 +492,8 @@ end
 
 
 function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::ComplexF64, frequency::Float64)
-    return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency ))
+    return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency))
 end
-
 
 function calcFieldProportionality(S_perturbed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
     ret = Vector{Float64}(undef, 0)
