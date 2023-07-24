@@ -6,7 +6,7 @@ using StatsBase
 
 # include("measurement.jl")
 
-const motorConversionFactor::Float64 = 6 / 500 # mm / step
+const motorConversionFactor::Float64 = 6.25 / 500 # mm / step
 
 function plotHeatmap(meas::Measurement; color=:inferno, normalize=false)
     E = calcFieldProportionality(meas; normalize=normalize)
@@ -185,7 +185,7 @@ function plotGaussianFit(Meas::Vector{Any}, mLabel::Vector{String}; xIntervall::
 
     # Instantiate plot
     plotData = plot(legend=:topright)
-    plotData = plot!(ylabel=L"$\sum{F}$  $[\mathrm{m/s\sqrt{kg}}]$")
+    plotData = plot!(ylabel=L"$\sum{F}$  $[arb. unit]$")
     plotData = plot!(xlabel=L"Position $[\mathrm{mm}]$")
 
     # Fit intervall
@@ -263,7 +263,6 @@ function plotGaussianFit(Meas::Vector{Any}, mLabel::Vector{String}; xIntervall::
     end
     x = xlims()[1] + (xlims()[2] - xlims()[1]) * 0.05
     y = ylims()[2]
-    plotData = annotate!([(x, y, Plots.text(L"\cdot 10^{6}", 11, :black, :center))])
 
     display(plotData)
 
