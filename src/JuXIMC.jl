@@ -213,7 +213,7 @@ function commandMove(device::DeviceId,pos::Int32,upos::Int32; info=false)
     return result
 end
 
-const commandMove(device::DeviceId,pos::Real,upos::Real) = commandMove(device,Int32(pos),Int32(upos))
+const commandMove(device::DeviceId,pos::Real,upos::Real; info=false) = commandMove(device,Int32(pos),Int32(upos); info=info)
 
 function commandMove(device::DeviceId,pos::Position; info=false)
     info && println("\nGoing to $pos, $upos")
@@ -449,6 +449,12 @@ function setSpeed(device::DeviceId,speed::Integer; info=false)
     result = setMoveSettings(device,mvst)
 
     info && println("Write command result: "*string(result))
+end
+
+function setSpeed(device::Vector{DeviceId}, speed::Integer; info=false)
+    for D in device
+        setSpeed(D, speed; info)
+    end
 end
 
 function getEngineSettings(device::DeviceId)
