@@ -5,6 +5,30 @@
 # Pkg.update()
 
 using Dragoon
+using Dates
+using Plots
+
+
+include("../src/vna_control.jl");
+include("../src/JuXIMC.jl");
+include("../examplesdom/dragoonstuff.jl");
+
+include("../examplesdom/stages.jl");
+
+infoXIMC();
+
+devcount, devenum, enumnames =
+    setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,b"addr=134.61.12.184");
+
+# =========================================================================
+
+D = openDevices(enumnames,stagenames)
+checkOrdering(D,stagenames)
+
+closeDevice(D[3],D[4])
+D = D[1:2]
+
+
 
 #number of discs in the booster
 n = 0
@@ -18,21 +42,11 @@ freqs = genFreqs(22.025e9,50e6; length=10) #optimize on these frequencies
 freqsplot = genFreqs(22.025e9,150e6; length=1000)
 
 #initialize physical properties of the booster
-booster = AnalyticalBooster(initdist)
-# booster.timestamp = DateTime(0)
-#=
-Booster(
-    pos,              disc positions
-    ndisk,            disc number
-    thickness,        disc thickness
-    epsilon,          disc epsilon
-    vmotor,           motor speed
-    maxlength,        maximum allowed booster length (not implemented yet)
-    timestamp,        booster operation time
-    summedtraveltime, summed motor operation time
-    codetimestamp     code runtime
+booster = AnalyticalBooster(
+    [initdist],1,0.,1.,1e-3,1,DateTime(0),
+    Dragoon.unow(),0.
 )
-=#
+
 
 #initialize storage of measurements
 hist = initHist(booster,10000,freqs,ObjAnalytical)
@@ -41,9 +55,9 @@ hist = initHist(booster,10000,freqs,ObjAnalytical)
 
 trace = linesearch(booster,hist,freqs,booster.vmotor*1e-3,
                     ObjAnalytical,
-                    SolverNewton("inv"),
-                    Derivator2(1e-5,1e-6,"double"),
+                    SolverSteepest,
+                    Derivator1(1e-6,"double"),
                     StepNorm("unit"),
-                    SearchExtendedSteps(2000),
+                    SearchExtendedSteps(1000),
                     UnstuckDont;
                     ϵgrad=0.,maxiter=Int(1e2),showtrace=true);
