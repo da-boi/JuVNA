@@ -1,8 +1,8 @@
-# using Pkg
+using Pkg
 
-# Pkg.add(url="https://github.com/mppmu/BoostFractor.jl.git")
-# Pkg.add(url="https://github.com/bergermann/Dragoon.jl.git")
-# Pkg.update()
+Pkg.add(url="https://github.com/bergermann/Dragoon.jl.git")
+Pkg.add(url="https://github.com/mppmu/BoostFractor.jl.git")
+Pkg.update()
 
 using Dragoon
 using Dates
@@ -28,9 +28,6 @@ checkOrdering(D,stagenames)
 closeDevice(D[3],D[4])
 D = D[1:2]
 
-
-
-#number of discs in the booster
 n = 0
 
 #initial disc configuration
