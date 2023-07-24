@@ -24,6 +24,12 @@ struct Measurement2D
     posSetY::Vector{Integer}
 end
 
+struct Traces
+    param::VNAParameters
+    freq::Vector{Float64}
+    data::Vector{Vector{ComplexF64}}
+end
+
 function saveMeasurement(data; filename::String="", name::String="unnamed", filedate=true)
     if filename == ""
         if filedate date = Dates.format(Dates.now(), "yyyy-mm-dd_") else date = "" end
@@ -52,6 +58,18 @@ function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::I
     else
         return reverse(Vector{Integer}(endPos:stepSize:startPos))
     end
+end
+
+function getTraces(socket::TCPSocket, n::Int; waittime=1)
+    f_data = getFreqAsBinBlockTransfer(socket)
+
+    ret = []
+    for i in 1:n
+        push!(ret, getTrace(socket))
+        sleep(waittime)
+    end
+
+    return (ret, f_data)
 end
 
 function getContinousMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000, speedSetup::Integer=1000)
@@ -151,7 +169,6 @@ function getContinousMeasurement(socket::TCPSocket, D::DeviceId, startPos::Integ
             passed = isGreaterEqPosition(currentPos, Position(posSet[current], 0))
         else
             passed = isSmallerEqPosition(currentPos, Position(posSet[current], 0))
-            if passed println(currentPos) end
         end
 
         # If a point has been passed, perform a measurement
@@ -264,7 +281,7 @@ function get2DMeasurement(socket::TCPSocket, D::Vector{DeviceId}, startPos::Vect
     return (S_data, f_data, pos_data, posSetX, posSetY)
 end
 
-function getSteppedMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000)
+function getSteppedMeasurement(socket::TCPSocket, D::DeviceId, startPos::Integer, endPos::Integer; stepSize::Integer=250, speed::Integer=1000)
     setMeasurement(vna, "CH1_S11_1")
     
     S_data = Vector{Vector{ComplexF64}}(undef, 0)

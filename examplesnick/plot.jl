@@ -285,6 +285,16 @@ function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::Comple
     return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) * n / frequency )) * 1e6
 end
 
+function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::Vector{ComplexF64}, frequency::Vector{Float64}, power::Real; normalize::Bool=false)
+    ret = Vector{Float64}(undef, 0)
+
+    for i in 1:length(S_pertubed)
+        push!(ret, calcFieldProportionality(S_pertubed[i], S_unperturbed[i], frequency[i], power; normalize=normalize))
+    end
+
+    return ret
+end
+
 function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64, power::Real; normalize::Bool=false)
     ret = Vector{Float64}(undef, 0)
 
