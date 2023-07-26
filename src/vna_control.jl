@@ -210,6 +210,35 @@ function setFormat2Log(socket::TCPSocket)
     return
 end
 
+function setFromFile(socket::TCPSocket,file::String)
+    for line in readlines(file)
+        l = split(line,'\t')
+        
+        if l[1] == "PWLV"
+            setPowerLevel(socket,parse(Float64,l[2]))
+        elseif l[1] == "AVRG"
+            if parse(Bool,l[2])
+                setAveraging(socket,true; counts=parse(Int,l[3]))
+            else
+                setAveraging(socket,false)
+            end
+        elseif l[1] == "FREQ"
+            setFrequencies(socket,parse(Float64,l[2]),parse(Float64,l[3]))
+        elseif l[1] == "SWPP"
+            setSweepPoints(socket,parse(Int,l[2]))
+        elseif l[1] == "IFBW"
+            setIFBandwidth(socket,parse(Float64,l[2]))
+        elseif l[1] == "FRMT"
+            if l[2] == "log"
+                setFormat2Log(socket)
+            end
+        end
+    end
+end
+
+
+
+
 function triggerContinuous(socket::TCPSocket)
     write(socket,
         codeunits(

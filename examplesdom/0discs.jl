@@ -32,22 +32,16 @@ vna = connectVNA()
 instrumentSimplifiedSetup(vna)
 
 
-# check type of vna!
 # check vna setup
 
 
-function objRefVNA(booster::Booster,freqs::Vector{Float64},args::Tuple{Any,Vector{ComplexF64}})
+function objRefVNA(booster::Booster,freqs::Vector{Float64},(vna::TCPSocket,ref::Vector{ComplexF64}))
     ref = getDataAsBinBlockTransfer(vna)
 
     return sum(abs.(ref-args[1]))
 end
 
-ObjRefVNA(ref0,vna) = Callback(objRefVNA,(ref0,vna))
-
-function getObjRef1d(booster::Booster,freqs::Vector{Float64},args::Tuple{Vector{ComplexF64}})
-    return sum(abs.(ref1d(pos2dist(booster.pos; thickness=booster.thickness),
-        freqs; eps=booster.epsilon,thickness=booster.thickness)-args[1]))
-end
+ObjRefVNA(ref0,vna) = Callback(objRefVNA,(vna,ref0))
 
 # =========================================================================
 
@@ -67,19 +61,18 @@ freqs = genFreqs(22.025e9,50e6; length=10);
 freqsplot = genFreqs(22.025e9,150e6; length=1000);
 
 devices = Devices(D,stagecals,stagecols,stagezeros,stageborders);
-b = PhysicalBooster(devices);
-b.epsilon = 1.;
+b = PhysicalBooster(devices, τ=0.,ϵ=1.,maxlength=0.2);
 
 objF = ObjRefVNA(ref0,vna)
 
 homeZero(b)
-move(b,[0.05]; additive=true)
+move(b,[0.01]; additive=true)
 
 ref0 = getDataAsBinBlockTransfer(vna)
 
 hist = initHist(b,100,freqs,objF);
 
-for i in 1:100
-    move(b,[0.01]; additive=true)
+for i in 1:50
+    move(b,[0.001]; additive=true)
     updateHist!(booster,hist,freqs,objF)
 end
