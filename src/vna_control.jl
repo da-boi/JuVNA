@@ -210,9 +210,13 @@ function setFormat2Log(socket::TCPSocket)
     return
 end
 
-function setFromFile(socket::TCPSocket,file::String)
+function setupFromFile(socket::TCPSocket,file::String)
     for line in readlines(file)
-        l = split(line,'\t')
+        if line[1] == '#'
+            continue
+        end
+        
+        l = split(line,':')
         
         if l[1] == "PWLV"
             setPowerLevel(socket,parse(Float64,l[2]))

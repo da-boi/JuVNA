@@ -6,6 +6,7 @@ Pkg.update()
 using Dragoon
 using Dates
 using Plots
+using JLD2
 
 
 include("../src/vna_control.jl");
@@ -22,7 +23,8 @@ devcount, devenum, enumnames =
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
 
-closeDevice(D[2],D[3],D[4])
+# closeDevice(D[2],D[3],D[4])
+closeDevice(D[2])
 D = D[1:1]
 
 getPosition(D,stagecals)
@@ -61,14 +63,11 @@ ObjRefRef(ref,ref0) = Callback(objRefRef,(ref,ref0))
 
 # =========================================================================
 
-
-
-# freqs = genFreqs(22.025e9,50e6; length=10);
-# freqsplot = genFreqs(22.025e9,150e6; length=1000);
-freqsplot = genFreqs(20.0e9,3e9; length=12800)
-
 devices = Devices(D,stagecals,stagecols,stagezeros,stageborders);
-b = PhysicalBooster(devices, τ=0.,ϵ=1.,maxlength=0.2);
+b = PhysicalBooster(devices, τ=1e-3,ϵ=9.1,maxlength=0.2);
+
+# =========================================================================
+
 
 homeZero(b)
 # move(b,[0.01]; additive=true)
@@ -87,6 +86,8 @@ R = zeros(ComplexF64,steps,length(ref0))
 
 # homeZero(b)
 # ref0 = getTrace(vna)
+sleep(5)
+
 for i in 1:steps
     (i%10 == 0) && println("step: ",i)
 
@@ -97,7 +98,13 @@ for i in 1:steps
     R[i,:] = ref
 end
 
-plot(reverse((x->x.objvalue).(hist)))
+plot((1:500)*0.0001,reverse((x->x.objvalue).(hist)))
+title!("1 discs, 18.5-21.5 GHz")
+xlabel!("disk position [m]")
+ylabel!("objective value")
+plotRef(ref0; freqs=freqs)
+
+@save "1_discs_scan_ref_and_hist_front.jld2" hist R
 
 
 
@@ -131,18 +138,23 @@ for i in 1:steps
     R[i,:] = ref
 end
 
-plot(reverse((x->x.objvalue).(hist)))
+plot((1:500)*0.0001,reverse((x->x.objvalue).(hist[2:501])))
+title!("1 discs, 18.5-21.5 GHz")
+xlabel!("disk position [m]")
+ylabel!("objective value")
+plotRef(ref0; freqs=freqs)
 
+@save "1_discs_scan_ref_and_hist_middle.jld2" hist R
 
 
 ## ==================================================================
 
 
 devices = Devices(D,stagecals,stagecols,stagezeros,stageborders);
-b = PhysicalBooster(devices, τ=0.,ϵ=1.,maxlength=0.2);
+b = PhysicalBooster(devices, τ=1e-3,ϵ=9.1,maxlength=0.2);
 
 homeZero(b)
-move(b,[0.05]; additive=false)
+move(b,[0.05]; additive=true)
 
 ref0 = getTrace(vna)
 objF = ObjRefVNA(vna,ref0)
@@ -156,7 +168,7 @@ trace = nelderMead(b,hist,freqs,
                 1.,1+2/b.ndisk,
                 0.75-1/(2*b.ndisk),1-1/(b.ndisk),
                 objF,
-                InitSimplexCoord(0.005),
+                InitSimplexCoord(0.001),
                 DefaultSimplexSampler,
                 UnstuckDont;
                 maxiter=Int(1e1),
