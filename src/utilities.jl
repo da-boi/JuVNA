@@ -83,3 +83,42 @@ function steps2x(
 end
 
 const s2x = steps2x
+
+function plotRef(ref; freqs=Nothing,freqsunit="G")
+    if freqsunit == "k"
+        u = 1e3
+    elseif freqsunit == "M"
+        u = 1e6
+    elseif freqsunit == "G"
+        u = 1e9
+    end
+
+    if freqs != Nothing
+        p1 = plot(freqs/u,real.(ref); label="Real")
+        plot!(p1,freqs/u,imag.(ref); label="Imag")
+
+        xlabel!("f in $(freqsunit)Hz")
+        ylabel!("Ref")
+
+        p2 = plot(real.(ref),imag.(ref); label = "Ref")
+        
+        xlabel!("Real(Ref)")
+        ylabel!("Imag(Ref)")
+    else
+        p1 = plot(real.(ref); label="Real")
+        plot!(p1,imag.(ref); label="Imag")
+
+        xlabel!("f_i")
+        ylabel!("Ref")
+
+        p2 = plot(real.(ref),imag.(ref); label = "Ref")
+        
+        xlabel!("Real(Ref)")
+        ylabel!("Imag(Ref)")
+    end
+
+    display(p1)
+    display(p2)
+
+    return p1, p2
+end
