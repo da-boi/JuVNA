@@ -1,6 +1,6 @@
 using Plots
 using LaTeXStrings
-import SciPy
+# using SciPy
 import Printf
 
 # include("measurement.jl")
@@ -41,10 +41,21 @@ function plot2DHeatmap (meas::Measurement; color=:inferno)
 end
 =#
 
-function plotHeatmap2D(meas::Measurement2D, frequency::Int64; color=:jet1)
-    E = calcFieldProportionality2D(meas, vNum, transData, i)
-    println(E)
 
+
+function setStepSize(res)
+    resolution = [1,2,4,5,8,10,20] 
+    stepSize = resolution[res]*80
+    vNum = Int(16000/stepSize)
+    return (stepSize, vNum)
+end
+
+
+function plotHeatmap2D(meas::Measurement2D, freqIndex::Int64; color=:jet1)
+    E = calcFieldProportionality2D(meas, res, transData, freqIndex)
+    
+    stepSize, vNum = setStepSize(res)
+    
     # The position vector
     uStep = 256
     stepsX = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 1:Int(length(meas.pos_BIGGER)/vNum)]
@@ -66,15 +77,16 @@ end
 #--------------------------------- TEST ----------------------------------
 
 
-function plotPoints(meas::Measurement2D, sweepPoints, vNum, transData)
-    
+function plotPoints(meas::Measurement2D, sweepPoints, res, transData)
+    stepSize, vNum = setStepSize(res)
     E_list=[]
     for i in 1:sweepPoints
         E = calcFieldProportionality2D(meas, vNum, transData, i)
         push!(E_list,E)
     end
-
-    E_total = transpose((sum(E_list)))
+    
+    
+    E_total = sum(E_list)
     uStep = 256
     stepsX = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 1:Int(length(meas.pos_BIGGER)/vNum)]
     x = stepsX .* motorConversionFactor
@@ -83,14 +95,17 @@ function plotPoints(meas::Measurement2D, sweepPoints, vNum, transData)
     linestyle = :dot,
     xlabel="x Position [mm]",
     ylabel="E [a.u.]",
-    title = "Sum of E-field at central vertical Pos [GHz]" 
+    title = "Sum of E-field at central vertical Pos" 
     ))
+    return E_total, E
 end
 
 
 
-function plotGaussianFit2D(meas::Measurement2D, sweepPoints, transData; color=:indianred1, xIntervall::Tuple{Real, Real}=(0, 0))
+function plotGaussianFit2D(meas::Measurement2D, sweepPoints, res, transData; color=:indianred1, xIntervall::Tuple{Real, Real}=(0, 0))
     # The sum of the field over every frequency
+    stepSize, vNum = setStepSize(res)
+
     E_list=[]
     for i in 1:sweepPoints
         E = calcFieldProportionality2D(meas, vNum, transData, i)
@@ -102,7 +117,8 @@ function plotGaussianFit2D(meas::Measurement2D, sweepPoints, transData; color=:i
 
     # The position vector
     uStep = 256
-    steps = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in eachindex(meas.pos_BIGGER[begin+1:end])]
+    steps = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in 2:Int(length(meas.pos_BIGGER)/vNum)]
+    #steps = [meas.pos_BIGGER[i].Position + meas.pos_BIGGER[i].uPosition/uStep for i in eachindex(meas.pos_BIGGER[begin+1:end])]
     x = steps .* motorConversionFactor
 
     # Crop the data to the specified intervall in which the fit is to be performed
@@ -265,7 +281,7 @@ end
 function plotGaussianFit(meas::Measurement, power; xIntervall::Tuple{Real, Real}=(0, 0))
 
     # The sum of the field over every frequency
-    E = calcFieldProportionality(meas) .*1000
+    E = calcFieldProportionality(meas)*sqrt(10^(power/10)/1000) .*1000
     y = dropdims(sum(E, dims=2), dims=2)[begin+1:end]
 
     # The position vector
@@ -479,7 +495,9 @@ end
 
 
 function calcFieldProportionality2D(meas, vNum, S_perturbed::Vector{Matrix{ComplexF64}}, freqIndex::Int64)
+
     E_data = Matrix{Float64}(undef, vNum, length(meas.posSet))
+    
     S_unperturbed = S_perturbed[freqIndex][1,1]
     for y in 1:vNum 
         for x in 1:length(meas.posSet)
@@ -493,9 +511,8 @@ end
 
 
 function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::ComplexF64, frequency::Float64)
-    return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency ))
+    return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) / frequency))
 end
-
 
 function calcFieldProportionality(S_perturbed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64)
     ret = Vector{Float64}(undef, 0)

@@ -10,7 +10,7 @@ include("vna_control.jl")
 include("JuXIMC.jl")
 #include("stages.jl")
 
-
+include("measurement.jl")
 
 function saveS2P(fileURL)
     instrumentDirectSocket.sendall(b"MMEMory:STORe '" + bytes(fileURL,encoding="utf8") + b"'\n")
@@ -133,14 +133,21 @@ end
 
 =#
 
+for res in 1:10 
+    stepSize = res*80
+    vNum = 16000/stepSize
+    println(vNum)
+end
+
+res = 2
+stepSize, vNum = setStepsize(res)
+    
 
 
 
+data = readMeasurement("TESTTESTTEST_2023-07-31_1.jld2")
 
-
-
-
-
+println(data.data)
 
 
 

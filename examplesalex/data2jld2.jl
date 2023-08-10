@@ -1,5 +1,5 @@
 import Dates
-using JLD2, FileIO
+using FileIO
 
 include("../src/ctypes.jl")
 include("../src/jtypes.jl")
