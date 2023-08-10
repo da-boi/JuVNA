@@ -98,13 +98,14 @@ for i in 1:steps
     R[i,:] = ref
 end
 
-plot((1:500)*0.0001,reverse((x->x.objvalue).(hist)))
+plot((1:500)*0.0001,reverse((x->x.objvalue).(hist[1:500])))
 title!("1 discs, 18.5-21.5 GHz")
 xlabel!("disk position [m]")
 ylabel!("objective value")
 plotRef(ref0; freqs=freqs)
+plotRef(R[500,:]; freqs=freqs)
 
-@save "1_discs_scan_ref_and_hist_front.jld2" hist R
+@save "1_discs_scan_ref_and_hist_front.jld2" ref0 hist R freqs
 
 
 
@@ -144,7 +145,7 @@ xlabel!("disk position [m]")
 ylabel!("objective value")
 plotRef(ref0; freqs=freqs)
 
-@save "1_discs_scan_ref_and_hist_middle.jld2" hist R
+@save "1_discs_scan_ref_and_hist_middle.jld2" ref0 hist R freqs
 
 
 ## ==================================================================
@@ -177,8 +178,12 @@ trace = nelderMead(b,hist,freqs,
                 unstuckisiter=true);
 
 plot(reverse((x->x.objvalue).(hist)))
+plotRef(ref0; freqs=freqs)
+plotRef(getTrace(vna); freqs=freqs)
 
 analyse(hist,trace,freqs)
+
+@save "1_disc_opt_trace_hist_middle.jld2" ref0 trace hist freqs
 
 
 

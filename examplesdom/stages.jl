@@ -18,7 +18,7 @@ stagecals = Dict{String,Tuple{Symbol,Float64}}(
 
 # (unit, distance to zero point)
 stagezeros = Dict{String,Tuple{Symbol,Float64}}(
-    "Monica" => (:mm,45),
+    "Monica" => (:mm,39),
     "Alexanderson" => (:mm,524),
     "Big Chungus" => (:mm,0),
     "Bigger Chungus" => (:mm,0),
@@ -34,7 +34,7 @@ stagecols = Dict{String,Tuple{Symbol,Float64,Float64}}(
 
 # (unit, left border, right border)
 stageborders = Dict{String,Tuple{Symbol,Float64,Float64}}(
-    "Monica" => (:mm,40,140),
+    "Monica" => (:mm,38,140),
     "Alexanderson" => (:mm,500,600),
     "Big Chungus" => (:mm,0,0),
     "Bigger Chungus" => (:mm,0,0),

@@ -104,6 +104,11 @@ function plotRef(ref; freqs=Nothing,freqsunit="G")
         
         xlabel!("Real(Ref)")
         ylabel!("Imag(Ref)")
+
+        p3 = plot(freqs/u,abs.(ref); yaxis=:log)
+
+        xlabel!("f in $(freqsunit)Hz")
+        ylabel!("Ref")
     else
         p1 = plot(real.(ref); label="Real")
         plot!(p1,imag.(ref); label="Imag")
@@ -119,6 +124,7 @@ function plotRef(ref; freqs=Nothing,freqsunit="G")
 
     display(p1)
     display(p2)
+    display(p3)
 
-    return p1, p2
+    return p1, p2, p3
 end
