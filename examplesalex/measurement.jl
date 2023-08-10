@@ -151,33 +151,37 @@ end
 
 
 
-function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; stepSize::Integer=500, speed::Integer=1000, speedSetup::Integer=1000,res::Integer=5, sweepPoints::Integer, motorSet::Integer)
-    
-    if motorSet == 1
-        BigChungus = 3
-        BiggerChungus = 4
-    elseif motorSet == 2
-        BigChungus = 1
-        BiggerChungus = 2
-    else
-        println("Error flasche Auswahl")
-        return 
-    end
-    stepSize = res*100
-    vNum = 16000/stepSize
+function setStepSize(res)
+    resolution = [1,2,4,5,8,10,20] 
+    stepSize = resolution[res]*80
+    vNum = Int(16000/stepSize)
+    return (stepSize, vNum)
+end
 
-    if res < 31
-        println("Resolution is too low, choose a number between 1 - 30 ")
+
+function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; speed::Integer=1000, speedSetup::Integer=1000, res::Integer, sweepPoints::Integer)
+    
+
+    BigChungus = 3
+    BiggerChungus = 4
+    resolution=[1,2,4,5,8,10,20]
+    stepSize, vNum = setStepSize(res)
+    
+    if res > 7
+        error("Resolution is too low, choose a number between 1 - 7 ")
     end
+
+    println("A resolution of "*string(res)*" was chosen, this corresponds to "*string(resolution[res])*" mm per vertical movement and "*string(Int(vNum))*" horizontal lines in the resultuing plot")
     #speedReset = getSpeed(D[BiggerChungus])
     pos_data_BIGGER = Vector{Position}(undef, 0)
     pos_data_BIG = Vector{Position}(undef, 0)
     f_data = getFreqAsBinBlockTransfer(vna)
     
-    posSet = getMeasurementPositions(startPos, endPos; stepSize=500)
+    posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
     posSetLen = length(posSet)::Int64
     S_data = Matrix{Vector{ComplexF64}}(undef,  vNum, length(posSet))
     
+
     #      Für 2D
     for i in BigChungus:BiggerChungus
         
@@ -190,36 +194,28 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
 
     
     
-
+    #movement of the motors
     for y in 1:vNum
-        println("Runde ", y)
+        println("round ", y)
         currentPos_BIG = getPos(D[BigChungus])
         push!(pos_data_BIG, currentPos_BIG)
-        #S_data_list = Vector{ComplexF64}(undef, sweepPoints)
         
         current = 1
         if y == 1    
             commandMove(D[BiggerChungus], endPos, 0)
-            #commandWaitForStop(D[BiggerChungus])
-            println("Erster Move")    
-
+            
         elseif y % 2 == 0
-            commandMove(D[BigChungus], stepSize*y, 0)
+            commandMove(D[BigChungus], startPos + stepSize*y, 0)
             commandWaitForStop(D[BigChungus])
-            println("Geht Runter")
             
             commandMove(D[BiggerChungus],  startPos, 0)
-            #commandWaitForStop(D[BiggerChungus])
-            println(y," gerade")
-
+            
         else
-            commandMove(D[BigChungus], stepSize*y, 0)
+            commandMove(D[BigChungus], startPos + stepSize*y, 0)
             commandWaitForStop(D[BigChungus])
-            println("Geht Runter")
-
+            
             commandMove(D[BiggerChungus], endPos, 0)
-            #commandWaitForStop(D[BiggerChungus])
-            println(y," ungerade")
+            
         end
     
 
@@ -228,34 +224,34 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
             currentPos_BIGGER = getPos(D[BiggerChungus])
             
             
-            println("current Pos ",currentPos_BIGGER)
+            #println("current Pos ",currentPos_BIGGER)
             # Check wether the current position has passed the intended point of measurement.
             # The condition if a point has been passed is dependent on the direction of travel.
 
             
 
             if y % 2 == 0 
-                println("y gerade ")
-                println(current)
+                #println("y gerade ")
+                #println(current)
                 
-                println("Wenn ",currentPos_BIGGER, "kleiner gleich ist als ", Position(posSet[length(posSet)+1-current],0))
+                #println("Wenn ",currentPos_BIGGER, "kleiner gleich ist als ", Position(posSet[length(posSet)+1-current],0))
                 passed = isSmallerEqPosition(currentPos_BIGGER, Position(posSet[length(posSet)+1-current], 0))
 
-                println(passed)
-                println("KLAPPT RÜCKWEG")
+                #println(passed)
+                #println("KLAPPT RÜCKWEG")
                 
             else
-                println("ungerade ",length(posSet))
-                println(current)
-                println(typeof(current))
+                #println("ungerade ",length(posSet))
+                #println(current)
+                #println(typeof(current))
                 passed = isGreaterEqPosition(currentPos_BIGGER, Position(posSet[current], 0))
-                println(passed)
-                println("KLAPPT HINWEG ")
+                #println(passed)
+                #println("KLAPPT HINWEG ")
             end
         
             # If a point has been passed, perform a measurement
             if passed
-                println("passed ", current)
+                #println("passed ", current)
                 storeTraceInMemory(socket, current)
                 push!(pos_data_BIGGER, currentPos_BIGGER)
                 current += 1
@@ -286,7 +282,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         
 
         for x in 1:length(posSet)
-            println(y,x)
+            #println(y,x)
             if y % 2 == 0
                 S_params = getTraceFromMemory(socket, x)
                 
@@ -310,7 +306,7 @@ function twoDMeasurement(socket::TCPSocket, startPos::Integer, endPos::Integer; 
         # S_data = Matrix(reduce(hcat, S_data))
         
         #println(S_data)
-        println(typeof(S_data))
+        #println(typeof(S_data))
         #deleteTrace(socket, 1)
 
 
@@ -329,9 +325,11 @@ function movetonull(startPos::Integer,speedSetup::Integer)
     end
 end
 
-#Transforming the Maxtrix where each cell contains a vector to a vector containing matricies. 
-function transform(data,sweepPoints,vNum,)
-    #transData = [undef, vNum, length(data.posSet) for _ in 1:sweepPoints]
+#Transforming the matrix where each cell contains a vector to a vector containing matricies. 
+function transform(data,sweepPoints,res)
+
+    stepSize, vNum = setStepSize(res)
+    
     transData = [Matrix{ComplexF64}(undef, (vNum, length(data.posSet))) for _ in 1:sweepPoints]
     for f in 1:sweepPoints
         for y in 1:vNum
@@ -344,10 +342,6 @@ function transform(data,sweepPoints,vNum,)
     return (transData)
 end
     
-
-
-
-
 
 
 
