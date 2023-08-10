@@ -21,12 +21,15 @@ mutable struct Devices <: DevicesType
     end
 end
 
-import Dragoon: PhysicalBooster
+
+
+import Dragoon: PhysicalBooster, unow
+
+
 
 function PhysicalBooster(devices::Devices; τ::Real=1e-3,ϵ::Real=24,maxlength::Real=2)
-
     b = PhysicalBooster(devices,zeros(length(devices.ids)),length(devices.ids),
-        τ,ϵ,maxlength,0,0)
+        τ,ϵ,maxlength,unow(),unow(),0)
 
     b.pos = steps2pos(getPos(devices.ids; fmt=Vector),b; outputunit=:m)
 
@@ -175,6 +178,8 @@ function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}}
     for i in eachindex(devices)
         commandMove(devices[i],positions[i][1],positions[i][2])
     end
+
+    return
 end
 
 import Dragoon: move
@@ -194,13 +199,18 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
 
     checkBorders(newpos,booster)
     
+    t = unow()
+
     commandMove(booster.devices.ids,pos2steps(newpos,booster; additive=additive))
     commandWaitForStop(booster.devices.ids)
+
+    booster.timestamp += unow() - t
 
     info && println("Finished moving.")
 
     updatePos!(booster)
-    booster.timestamp += 1
+
+    return
 end
 
 
@@ -210,6 +220,7 @@ end
 function homeZero(booster::PhysicalBooster)
     commandMove(booster.devices.ids,zeros(Int32,booster.ndisk,2))
     commandWaitForStop(booster.devices.ids)
+    
     booster.pos = getPos(b)
 end
 

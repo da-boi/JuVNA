@@ -6,7 +6,7 @@ using StatsBase
 
 # include("measurement.jl")
 
-const motorConversionFactor::Float64 = 6 / 500 # mm / step
+const motorConversionFactor::Float64 = 6.25 / 500 # mm / step
 
 function plotHeatmap(meas::Measurement; color=:inferno, normalize=false)
     E = calcFieldProportionality(meas; normalize=normalize)
@@ -29,7 +29,7 @@ function plotHeatmap(meas::Measurement; color=:inferno, normalize=false)
     return
 end
 
-function plot2DHeatmap(meas::Measurement2D_; color=:inferno, normalize=false, f=0)
+function plot2DHeatmap(meas::Measurement2D; color=:inferno, normalize=false, f=0)
     E = calcFieldProportionality(meas)
     if f == 0
         E = sum(E, dims=3)[:,:,1]
@@ -185,7 +185,7 @@ function plotGaussianFit(Meas::Vector{Any}, mLabel::Vector{String}; xIntervall::
 
     # Instantiate plot
     plotData = plot(legend=:topright)
-    plotData = plot!(ylabel=L"$\sum{F}$  $[\mathrm{m/s\sqrt{kg}}]$")
+    plotData = plot!(ylabel=L"$\sum{F}$  $[arb. unit]$")
     plotData = plot!(xlabel=L"Position $[\mathrm{mm}]$")
 
     # Fit intervall
@@ -263,7 +263,6 @@ function plotGaussianFit(Meas::Vector{Any}, mLabel::Vector{String}; xIntervall::
     end
     x = xlims()[1] + (xlims()[2] - xlims()[1]) * 0.05
     y = ylims()[2]
-    plotData = annotate!([(x, y, Plots.text(L"\cdot 10^{6}", 11, :black, :center))])
 
     display(plotData)
 
@@ -275,7 +274,7 @@ end
 
 ### Analysis ###
 
-function dBm2mW(dBm::Real)
+function dBm2W(dBm::Real)
     return 10^(dBm/10)*1e-3
 end
 
@@ -283,6 +282,16 @@ function calcFieldProportionality(S_perturbed::ComplexF64, S_unperturbed::Comple
     n = 1
     if !normalize n = dBm2W(power) end
     return Float64(sqrt(abs(abs(S_perturbed - S_unperturbed)) * n / frequency )) * 1e6
+end
+
+function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::Vector{ComplexF64}, frequency::Vector{Float64}, power::Real; normalize::Bool=false)
+    ret = Vector{Float64}(undef, 0)
+
+    for i in 1:length(S_pertubed)
+        push!(ret, calcFieldProportionality(S_pertubed[i], S_unperturbed[i], frequency[i], power; normalize=normalize))
+    end
+
+    return ret
 end
 
 function calcFieldProportionality(S_pertubed::Vector{ComplexF64}, S_unperturbed::ComplexF64, frequency::Float64, power::Real; normalize::Bool=false)
@@ -317,7 +326,7 @@ end
 
 calcFieldProportionality(meas::Measurement; normalize::Bool=false) = calcFieldProportionality(meas.data, meas.freq, meas.param.power; normalize=normalize)
 
-# function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+# function calcFieldProportionality(meas::Measurement2D; normalize::Bool=false)
 #     s = (size(meas.data)..., length(meas.freq))
 #     ret = Array{Float64, 3}(undef, s)
 
@@ -335,7 +344,7 @@ calcFieldProportionality(meas::Measurement; normalize::Bool=false) = calcFieldPr
 #     return ret
 # end
 
-function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+function calcFieldProportionality(meas::Measurement2D; normalize::Bool=false)
     s = (size(meas.data)..., length(meas.freq))
     ret = Array{Float64, 3}(undef, s)
 
@@ -354,7 +363,7 @@ function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
     return ret
 end
 
-# function calcFieldProportionality(meas::Measurement2D_; normalize::Bool=false)
+# function calcFieldProportionality(meas::Measurement2D; normalize::Bool=false)
 #     s = (size(meas.data)..., length(meas.freq))
 #     ret = Array{Float64, 3}(undef, s)
 
