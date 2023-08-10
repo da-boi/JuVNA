@@ -1,6 +1,6 @@
 using Plots
 using LaTeXStrings
-using SciPy
+# using SciPy
 import Printf
 
 # include("measurement.jl")

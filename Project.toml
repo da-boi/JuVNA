@@ -1,37 +1,5 @@
 [deps]
-<<<<<<< HEAD
-Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
-=======
-BoostFractor = "222d2961-0b53-58be-99ce-9613a82efb32"
-CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
-ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
-DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
-Dragoon = "2528b1d8-4502-48e3-b632-a5c1e1215533"
->>>>>>> 3c9e36332a705df5c9024247b269e2b9f8d1b48c
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
-<<<<<<< HEAD
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
-SciPy = "ebc72ef8-9537-4fb0-b64e-ac76025fed2d"
-Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
-Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
-=======
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-LsqFit = "2fda8390-95c7-5789-9bda-21331edee243"
-Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
-Measures = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-SciPy = "ebc72ef8-9537-4fb0-b64e-ac76025fed2d"
-Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
->>>>>>> 3c9e36332a705df5c9024247b269e2b9f8d1b48c
-StringViews = "354b36f9-a18e-4713-926e-db85100087ba"
