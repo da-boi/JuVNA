@@ -1,13 +1,15 @@
 using Pkg
 
+Pkg.add(url="https://github.com/mppmu/BoostFractor.jl.git")
 Pkg.add(url="https://github.com/bergermann/Dragoon.jl.git")
 Pkg.update()
+
+
 
 using Dragoon
 using Dates
 using Plots
 using JLD2
-
 
 include("../src/vna_control.jl");
 include("../src/JuXIMC.jl");
@@ -23,9 +25,9 @@ devcount, devenum, enumnames =
 D = openDevices(enumnames,stagenames)
 checkOrdering(D,stagenames)
 
-# closeDevice(D[2],D[3],D[4])
-closeDevice(D[2])
-D = D[1:1]
+closeDevice(D[1],D[3],D[4])
+# closeDevice(D[2])
+D = D[2:2]
 
 getPosition(D,stagecals)
 

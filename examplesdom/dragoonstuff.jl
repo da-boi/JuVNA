@@ -191,11 +191,17 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
 
     info && println("Moving to ",booster.pos .* additive + newpos)
 
-    checkCollision(booster.pos,newpos,booster; additive=additive) &&
-        error("Discs are about to collide!")
+    checkCollision(booster.pos,newpos,booster; additive=additive) && begin
+            println("Current pos:"); println.(booster.pos)
+            println("New pos:"); println.(newpos)
+            error("Discs are about to collide!")
+        end
 
-    checkBorders(newpos,booster;additive=additive) &&
-        error("Discs are about to move out of bounds.")
+    checkBorders(newpos,booster;additive=additive) && begin
+            println("Current pos:"); println.(booster.pos)
+            println("New pos:"); println.(newpos)
+            error("Discs are about to move out of bounds.")
+        end
 
     checkBorders(newpos,booster)
     
@@ -211,6 +217,22 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
     updatePos!(booster)
 
     return
+end
+
+function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Tuple{Int64,Float64}};
+        additive=true, info::Bool=false)
+
+    newpos_ = copy(booster.pos)
+
+    for n in newpos
+        if additive
+            newpos_[n[1]] += n[2]
+        else
+            newpos_[n[1]] = n[2]
+        end
+    end
+
+    Dragoon.move(booster,newpos_; additive=false,info=info)
 end
 
 
