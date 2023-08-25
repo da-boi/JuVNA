@@ -605,7 +605,29 @@ function setupDevices(probeflags::UInt32,enumhints::Base.CodeUnits{UInt8,String}
     return devcount, devenum, enumnames
 end
 
+function requestDevices(stagenames...; address=b"addr=134.61.12.184")
+    devcount, devenum, enumnames =
+        setupDevices(ENUMERATE_PROBE | ENUMERATE_NETWORK,address);
 
+    D = [openDevice(en) for en in enumnames]
+    D_ = zeros(Int32,length(stagenames))
+
+    for d in D
+        n = getStageName(d)
+
+        if !(n in stagenames)
+            closeDevice(d)
+
+            continue
+        end
+
+        i = findfirst(isequal(n),stagenames)
+
+        D_[i] = d
+    end
+
+    return D_
+end
 
 
 

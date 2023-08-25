@@ -227,7 +227,12 @@ function setupFromFile(socket::TCPSocket,file::String)
                 setAveraging(socket,false)
             end
         elseif l[1] == "FREQ"
-            setFrequencies(socket,parse(Float64,l[2]),parse(Float64,l[3]))
+            if length(l) == 3
+                setFrequencies(socket,parse(Float64,l[2]),parse(Float64,l[3]))
+            elseif length(l) == 4
+                f1 = parse(Float64,l[2]); f2 = parse(Float64,l[3])
+                setFrequencies(socket,(f1+f2)/2,f2-f1)
+            end
         elseif l[1] == "SWPP"
             setSweepPoints(socket,parse(Int,l[2]))
         elseif l[1] == "IFBW"
@@ -236,6 +241,18 @@ function setupFromFile(socket::TCPSocket,file::String)
             if l[2] == "log"
                 setFormat2Log(socket)
             end
+        elseif l[1] == "CALB"
+            c = copy(l[2])
+
+            if c[1] != '{'
+                c = "{"*c
+            end
+
+            if c[end] != '}'
+                c = c*"}"
+            end
+
+            setCalibration(vna,c)
         end
     end
 end
