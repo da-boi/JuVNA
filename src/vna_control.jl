@@ -219,7 +219,7 @@ function setupFromFile(socket::TCPSocket,file::String)
         l = split(line,':')
         
         if l[1] == "PWLV"
-            setPowerLevel(socket,parse(Float64,l[2]))
+            setPowerLevel(socket,parse(Int,l[2]))
         elseif l[1] == "AVRG"
             if parse(Bool,l[2])
                 setAveraging(socket,true; counts=parse(Int,l[3]))
@@ -234,15 +234,15 @@ function setupFromFile(socket::TCPSocket,file::String)
                 setFrequencies(socket,(f1+f2)/2,f2-f1)
             end
         elseif l[1] == "SWPP"
-            setSweepPoints(socket,parse(Int,l[2]))
+            setSweepPoints(socket,Int64(parse(Float64,l[2])))
         elseif l[1] == "IFBW"
-            setIFBandwidth(socket,parse(Float64,l[2]))
+            setIFBandwidth(socket,Int64(parse(Float64,l[2])))
         elseif l[1] == "FRMT"
             if l[2] == "log"
                 setFormat2Log(socket)
             end
         elseif l[1] == "CALB"
-            c = copy(l[2])
+            c = String(l[2])
 
             if c[1] != '{'
                 c = "{"*c
@@ -251,7 +251,7 @@ function setupFromFile(socket::TCPSocket,file::String)
             if c[end] != '}'
                 c = c*"}"
             end
-
+            
             setCalibration(vna,c)
         end
     end

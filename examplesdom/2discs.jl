@@ -21,14 +21,7 @@ getPosition(D,stagecals)
 # =========================================================================
 
 vna = connectVNA()
-setPowerLevel(vna,9)
-setAveraging(vna,false)
-setFrequencies(vna,20.00e9,3e9)
-setSweepPoints(vna,128)
-setIFBandwidth(vna,Int(100e6))
-# setFormat2Log(vna)
-setCalibration(vna,"{483B25B2-6FE9-483E-8A93-0527B8D277E2}")
-# instrumentSimplifiedSetup(vna)
+setupFromFile(vna,"src/vna_20G_3G.txt")
 
 freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
 
@@ -81,3 +74,44 @@ p0 = copy(b.pos)
 end
 
 @save "2_discs_scan_ref_and_hist_middle.jld2" ref0 hist R freqs
+
+
+
+# =========================================================================
+
+homeZero(b)
+move(b,[0.025,0.025]; additive=true)
+
+ref0 = getTrace(vna)
+objF = ObjRefVNA(vna,ref0)
+objFR(ref) = ObjRefRef(ref,ref0)
+
+
+
+hist = initHist(b,1001,freqs,objFR(ref0));
+updateHist!(b,hist,freqs,objFR(ref0))
+
+
+
+move(b,[0.0,0.001]; additive=true)
+
+trace = nelderMead(b,hist,freqs,
+                1.,1+2/b.ndisk,
+                0.75-1/(2*b.ndisk),1-1/(b.ndisk),
+                objF,
+                InitSimplexCoord(0.001),
+                DefaultSimplexSampler,
+                UnstuckDont;
+                maxiter=50,
+                showtrace=true,
+                showevery=1,
+                unstuckisiter=true,
+                resettimer=true);
+
+plot(reverse((x->x.objvalue).(hist)))
+# plotRef(ref0; freqs=freqs)
+plotRef(getTrace(vna); freqs=freqs)
+
+analyse(hist,trace,freqs)
+
+@save "2_disc_opt_trace_hist_middle.jld2" ref0 trace hist freqs
