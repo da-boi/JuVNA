@@ -612,6 +612,14 @@ function requestDevices(stagenames...; address=b"addr=134.61.12.184")
     D = [openDevice(en) for en in enumnames]
     D_ = zeros(Int32,length(stagenames))
 
+    N = getStageName.(D)
+
+    for s in stagenames
+        if !(s in N)
+            error("Device $s not found.")
+        end
+    end
+
     for d in D
         n = getStageName(d)
 
