@@ -123,6 +123,8 @@ analyse(hist,trace,freqs)
 @save "2_disc_opt_trace_hist_middle_3mm.jld2" ref0 trace hist freqs
 
 
+# ============
+
 
 homeZero(b)
 move(b,[0.025,0.025]; additive=true)
@@ -136,16 +138,18 @@ objFR(ref) = ObjRefRef(ref,ref0)
 hist = initHist(b,1001,freqs,objFR(ref0));
 updateHist!(b,hist,freqs,objFR(ref0))
 
-move(b,[0.0,0.001]; additive=true)
+move(b,[0.0,0.002]; additive=true)
 trace = linesearch(b,hist,freqs,1e-5,
                     objF,
                     SolverSteep,
                     Derivator1(1e-4,"double"),
                     StepNorm("unit"),
-                    SearchExtendedSteps(100),
+                    SearchExtendedSteps(50),
                     UnstuckDont;
                     ϵgrad=0.,maxiter=Int(1e2),showtrace=true,
                     resettimer=true);
+
+analyse(hist,trace,freqs)
 
 
 # =========================================================================
