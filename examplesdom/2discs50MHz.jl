@@ -25,7 +25,7 @@ getPosition(D,stagecals)
 # =========================================================================
 
 vna = connectVNA()
-setupFromFile(vna,"src/vna_20G_3G.txt")
+setupFromFile(vna,"src/vna_22G_50M.txt")
 
 freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
 
@@ -33,8 +33,6 @@ freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
 
 
 function objRefVNA(booster::Booster,freqs::Vector{Float64},(vna,ref0)::Tuple{TCPSocket,Vector{ComplexF64}})
-    sleep(1)
-
     ref = getTrace(vna)
 
     return sum(abs.(ref-ref0))
@@ -81,7 +79,7 @@ p0 = copy(b.pos)
     R[i+steps+1,j+steps+1,:] = ref
 end
 
-@save "2_discs_scan_ref_and_hist_middle.jld2" ref0 hist R freqs
+@save "2_discs_scan_ref_and_hist_middle_50MHz.jld2" ref0 hist R freqs
 
 
 
@@ -100,22 +98,20 @@ objFR(ref) = ObjRefRef(ref,ref0)
 hist = initHist(b,1001,freqs,objFR(ref0));
 updateHist!(b,hist,freqs,objFR(ref0))
 
-
-
-move(b,[0.0,0.002]; additive=true)
+move(b,[0.0,0.001]; additive=true)
 
 trace = nelderMead(b,hist,freqs,
     1.,1+2/b.ndisk,
     0.75-1/(2*b.ndisk),1-1/(b.ndisk),
     objF,
-    InitSimplexCoord(0.001),
+    InitSimplexCoord(0.002),
     DefaultSimplexSampler,
     UnstuckDont;
     maxiter=50,
     showtrace=true,
     showevery=1,
     unstuckisiter=true,
-    forcesimplexobj=true,
+    forcesimplexobj=false,
     resettimer=true);
 
 # plot(reverse((x->x.objvalue).(hist)))
@@ -125,6 +121,31 @@ trace = nelderMead(b,hist,freqs,
 analyse(hist,trace,freqs)
 
 @save "2_disc_opt_trace_hist_middle_3mm.jld2" ref0 trace hist freqs
+
+
+
+homeZero(b)
+move(b,[0.025,0.025]; additive=true)
+
+ref0 = getTrace(vna)
+objF = ObjRefVNA(vna,ref0)
+objFR(ref) = ObjRefRef(ref,ref0)
+
+
+
+hist = initHist(b,1001,freqs,objFR(ref0));
+updateHist!(b,hist,freqs,objFR(ref0))
+
+move(b,[0.0,0.001]; additive=true)
+trace = linesearch(b,hist,freqs,1e-5,
+                    objF,
+                    SolverSteep,
+                    Derivator1(1e-4,"double"),
+                    StepNorm("unit"),
+                    SearchExtendedSteps(100),
+                    UnstuckDont;
+                    ϵgrad=0.,maxiter=Int(1e2),showtrace=true,
+                    resettimer=true);
 
 
 # =========================================================================

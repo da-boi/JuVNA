@@ -241,6 +241,8 @@ function setupFromFile(socket::TCPSocket,file::String)
             if l[2] == "log"
                 setFormat2Log(socket)
             end
+        elseif l[1] == "MSRM"
+            setMeasurement(socket,String(l[2]))
         elseif l[1] == "CALB"
             c = String(l[2])
 
