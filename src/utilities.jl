@@ -120,6 +120,11 @@ function plotRef(ref; freqs=Nothing,freqsunit="G")
         
         xlabel!("Real(Ref)")
         ylabel!("Imag(Ref)")
+
+        p3 = plot(abs.(ref); yaxis=:log)
+
+        xlabel!("f_i")
+        ylabel!("Ref")
     end
 
     display(p1)

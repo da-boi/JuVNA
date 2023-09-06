@@ -9,6 +9,7 @@ mutable struct Devices <: DevicesType
     stagezeros::Vector{Tuple{Symbol,Float64}}
     stagecols::Vector{Tuple{Symbol,Float64,Float64}}
     stageborders::Vector{Tuple{Symbol,Float64,Float64}}
+    stagehomes::Vector{Tuple{Symbol,Float64}}
 
     function Devices(ids,stagecals::Dict,stagecols::Dict,stagezeros::Dict,stageborders::Dict)
         sn = [getStageName(D[i]) for i in eachindex(D)]
@@ -17,7 +18,18 @@ mutable struct Devices <: DevicesType
         scol = [stagecols[getStageName(D[i])] for i in eachindex(D)]
         sb = [stageborders[getStageName(D[i])] for i in eachindex(D)]
 
-        new(ids,sn,scal,sz,scol,sb)
+        new(ids,sn,scal,sz,scol,sb,[])
+    end
+
+    function Devices(ids,stagecals::Dict,stagecols::Dict,stagezeros::Dict,stageborders::Dict,stagehomes::Dict)
+        sn = [getStageName(D[i]) for i in eachindex(D)]
+        scal = [stagecals[getStageName(D[i])] for i in eachindex(D)]
+        sz = [stagezeros[getStageName(D[i])] for i in eachindex(D)]
+        scol = [stagecols[getStageName(D[i])] for i in eachindex(D)]
+        sb = [stageborders[getStageName(D[i])] for i in eachindex(D)]
+        sh = [stagehomes[getStageName(D[i])] for i in eachindex(D)]
+
+        new(ids,sn,scal,sz,scol,sb,sh)
     end
 end
 
@@ -118,12 +130,12 @@ function checkCollision(pos::Vector{Float64},
         booster::PhysicalBooster)
     
     for i in 1:booster.ndisk-1
-        b1 = booster.devices.stageborders[i]
-        b2 = booster.devices.stageborders[i+1]
+        c1 = booster.devices.stagecols[i]
+        c2 = booster.devices.stagecols[i+1]
 
-        if pos[i+1]-pos[i] < 0
+        if pos[i+1] < pos[i]
             return true
-        elseif pos[i+1]-pos[i] < b1[3]/b1[1]-b2[2]/b2[1]
+        elseif pos[i+1]+c2[2]*c2[1] < pos[i]+c1[3]*c1[1] # pos[i+1]-pos[i] < c1[3]/c1[1]-c2[2]/c2[1]
             return true
         end
     end
@@ -155,9 +167,9 @@ end
 
 function checkBorders(newpos::Vector{Float64},booster::PhysicalBooster; additive::Bool=false)
     for i in 1:booster.ndisk
-        if !(booster.devices.stageborders[i][2]*booster.devices.stageborders[i][1] <=
-                booster.pos[i]*additive+newpos[i] <=
-                booster.devices.stageborders[i][3]*booster.devices.stageborders[i][1])
+        b = booster.devices.stageborders[i]
+
+        if !(b[2]*b[1] <= booster.pos[i]*additive+newpos[i] <= b[3]*b[1])
 
             return true
         end
@@ -182,6 +194,8 @@ function commandMove(devices::Vector{DeviceId},positions::Vector{Tuple{Int,Int}}
     return
 end
 
+
+
 import Dragoon: move
 
 function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
@@ -193,17 +207,17 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
 
     checkCollision(booster.pos,newpos,booster; additive=additive) && begin
             println("Current pos:"); println.(booster.pos)
-            println("New pos:"); println.(newpos)
+            println("New pos:"); println.(newpos+pos.*additive)
             error("Discs are about to collide!")
         end
 
     checkBorders(newpos,booster;additive=additive) && begin
             println("Current pos:"); println.(booster.pos)
-            println("New pos:"); println.(newpos)
+            println("New pos:"); println.(newpos+pos.*additive)
             error("Discs are about to move out of bounds.")
         end
 
-    checkBorders(newpos,booster)
+    # checkBorders(newpos,booster)
     
     t = unow()
 
@@ -243,11 +257,16 @@ function homeZero(booster::PhysicalBooster)
     commandMove(booster.devices.ids,zeros(Int32,booster.ndisk,2))
     commandWaitForStop(booster.devices.ids)
     
-    booster.pos = getPos(b)
+    booster.pos = getPos(booster)
 end
 
 function homeHome(booster::PhysicalBooster)
-    return 
+    home = [h[2]*h[1] for h in booster.devices.stagehomes]
+
+    println("Going home...")
+    move(booster,home; additive=false,info=true)
+
+    booster.pos = getPos(booster)
 end
 
 
