@@ -207,13 +207,13 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
 
     checkCollision(booster.pos,newpos,booster; additive=additive) && begin
             println("Current pos:"); println.(booster.pos)
-            println("New pos:"); println.(newpos+pos.*additive)
+            println("New pos:"); println.(newpos+booster.pos.*additive)
             error("Discs are about to collide!")
         end
 
     checkBorders(newpos,booster;additive=additive) && begin
             println("Current pos:"); println.(booster.pos)
-            println("New pos:"); println.(newpos+pos.*additive)
+            println("New pos:"); println.(newpos+booster.pos.*additive)
             error("Discs are about to move out of bounds.")
         end
 
@@ -225,6 +225,8 @@ function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Float64};
     commandWaitForStop(booster.devices.ids)
 
     booster.timestamp += unow() - t
+    additive ? (booster.summeddistance += sum(abs.(newpos))) :
+        (booster.summeddistance += sum(abs.(newpos-booster.pos)))
 
     info && println("Finished moving.")
 
