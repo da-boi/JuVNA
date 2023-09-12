@@ -238,6 +238,7 @@ end
 function Dragoon.move(booster::PhysicalBooster,newpos::Vector{Tuple{Int64,Float64}};
         additive=true, info::Bool=false)
 
+    updatePos!(booster)
     newpos_ = copy(booster.pos)
 
     for n in newpos
