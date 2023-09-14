@@ -133,3 +133,49 @@ function plotRef(ref; freqs=Nothing,freqsunit="G")
 
     return p1, p2, p3
 end
+
+
+
+function groupDelay(ref::Vector{ComplexF64},freqs::Vector{Float64})
+    if length(ref) != length(freqs)
+        return error("Array lengths don't match up.")
+    end
+
+    r_ = abs2.(ref)
+
+    return (r_[2:end]-r_[1:end-1])./(freqs[2:end]-freqs[1:end-1])
+end
+
+function makeScan(hist; n=20,l=2,clim=(-1,2),levels=30)
+    R = reverse(reshape((x->x.objvalue).(hist[1:(2n+1)^2]),
+        (2steps+1,2steps+1)));
+
+    println(log10.(extrema(R)))
+
+    scan = contourf(-l:l/n:l,-l:l/n:l,log10.(R);
+        color=:turbo,levels=levels,lw=0,aspect_ratio=:equal,
+        clim=clim)
+
+    xlims!(scan,(-l,l)); ylims!(scan,(-l,l))
+
+    return scan
+end
+
+
+
+function plotPath(p,hist,p0; l=2,u=1e-3)
+    idx = findfirst(x->x.objvalue==0,hist)
+    if isnothing(idx); idx = length(hist); else idx -= 1; end
+
+    X = zeros(idx,2)
+
+    for i in 1:idx
+        X[i,:] = (hist[i].pos-p0)/u
+    end
+
+    p_ = plot!(deepcopy(p),X[:,1],X[:,2];
+        c=:black,linewidth=0.5,legend=false)
+    xlims!(p_,-l,l); ylims!(p_,-l,l)
+
+    return p_
+end
