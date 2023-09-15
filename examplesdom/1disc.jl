@@ -1,6 +1,5 @@
 using Pkg
-
-Pkg.add(url="https://github.com/mppmu/BoostFractor.jl.git")
+# Pkg.add(url="https://github.com/mppmu/BoostFractor.jl.git")
 Pkg.add(url="https://github.com/bergermann/Dragoon.jl.git")
 Pkg.update()
 
