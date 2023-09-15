@@ -87,7 +87,7 @@ move(b,[-0.000,-0.002]; additive=true)
 
 @time tracehyb = linesearch(b,histhyb,freqs,10e-6,
     Obj,
-    SolverHybrid("inv",-0.00,1e-6,1),
+    Dragoon.SolverHybrid("inv",-0.00,1e-6,1),
     Derivator2(1e-9,1e-9,"double"),
     StepNorm("unit"),
     SearchExtendedSteps(100),
@@ -113,13 +113,13 @@ move(b,p0; additive=false)
 histnm = initHist(b,100001,freqs,Obj);
 updateHist!(b,histnm,freqs,Obj)
 
-move(b,[-0.001,0.000]; additive=true)
+move(b,[0.00,0.0005]; additive=true)
 
 tracenm = nelderMead(b,histnm,freqs,
     1.,1+2/b.ndisk,1e-6,
     0.75-1/(2*b.ndisk),1-1/(b.ndisk),
     Obj,
-    InitSimplexCoord(0.001),
+    Dragoon.InitSimplexRegular(),
     DefaultSimplexSampler,
     UnstuckDont;
     maxiter=50,
