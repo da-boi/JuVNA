@@ -103,3 +103,30 @@ plotPath(scan,histhyb,p0; u=1e-3,l=2)
 
 # ==============================================================================
 
+
+# ==============================================================================
+### optimization nelder mead
+
+
+move(b,p0; additive=false)
+
+histnm = initHist(b,100001,freqs,Obj);
+updateHist!(b,histnm,freqs,Obj)
+
+move(b,[-0.001,0.000]; additive=true)
+
+tracenm = nelderMead(b,histnm,freqs,
+    1.,1+2/b.ndisk,
+    0.75-1/(2*b.ndisk),1-1/(b.ndisk),
+    Obj,
+    InitSimplexCoord(0.001),
+    DefaultSimplexSampler,
+    UnstuckDont;
+    maxiter=50,
+    showtrace=true,
+    showevery=1,
+    unstuckisiter=true,
+    forcesimplexobj=false,
+    resettimer=true);
+
+plotPath(scan,histnm,p0; u=1e-3,l=2)
