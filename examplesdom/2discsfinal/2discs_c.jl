@@ -23,15 +23,24 @@ include("stages2discs_c.jl");
 vna = connectVNA();
 
 # setSweepPoints(vna,128)
+send(vna, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+send(vna, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+send(vna, "SENSe:AVERage:STATe ON;*OPC?\n")
+send(vna, "SENSe:AVERage:COUNt 10;*OPC\n")
+send(vna, "SENS:SWE:GRO:COUN 20;*OPC?\n")
+
+getTrace(vna; set=true)
 
 getTraceG(vna,10; set=true)
+
+
 
 freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
 
 function objRefVNA(booster::Booster,freqs::Vector{Float64},(vna,ref0)::Tuple{TCPSocket,Vector{ComplexF64}})
     # sleep(1)
 
-    ref = getTraceG(vna,10)
+    ref = sum([getTrace(vna) for i in 1:20])/20
 
     return sum(abs.(ref-ref0))
 end
@@ -56,7 +65,8 @@ b = PhysicalBooster(devices; τ=1e-3,ϵ=9.4,maxlength=0.2);
 
 p0 = [0.013,0.027]
 move(b,p0; additive=false);
-getTraceG(vna,10);
+# @time getTraceG(vna);
+@time getTrace(vna);
 
 # ======================================================================================================================
 ### scan
@@ -84,18 +94,7 @@ R = zeros(ComplexF64,2*steps+1,2*steps+1,length(ref0))
     R[i+steps+1,j+steps+1,:] = ref
 end
 
-n = 20
-l = 2
-
-R_ = reverse(reshape((x->x.objvalue).(histscan[1:end-1]),(2n+1,2n+1))); println(log10.(extrema(R_)))
-
-scan = contourf(-l:l/n:l,-l:l/n:l,log10.(R_); color=:turbo,levels=30,lw=0,aspect_ratio=:equal,
-    clim=(-0.6,1.6),colorbar_title=L"\log_{10} f_R")
-ylims!((-l,l))
-xlabel!(L"\Delta x_1"*" [mm]")
-ylabel!(L"\Delta x_2"*" [mm]")
-
-display(scan)
+scan = makeScan(histscan; clim=(0,1.6))
 
 @save "2_discs_c_scan_20p3G_peak_11_09_zoom.jld2" ref0 histscan R freqs
 
@@ -160,6 +159,39 @@ plotPathTrace(tracelsn,"2_discs_c_scan_20p3G_peak_11_09.jld2"; clim=(-0.6,1.6))
 analyse(histlsn,tracelsn,freqs)
 
 
+# ======================================================================================================================
+### optimization linesearch hybrid
+
+
+move(b,p0; additive=false)
+
+ref0 = getTraceG(vna,10)
+objF = ObjRefVNA(vna,ref0)
+objFR(ref) = ObjRefRef(ref,ref0)
+
+histlsn = initHist(b,10001,freqs,objFR(ref0));
+updateHist!(b,histlsn,freqs,objFR(ref0))
+
+move(b,[0.0,0.001]; additive=true)
+
+@time tracelsn = linesearch(b,histlsn,freqs,10e-6,
+    objF,
+    Dragoon.SolverHybrid("inv",0,10e-6,1),
+    Derivator2(5e-6,10e-6,"double"),
+    StepNorm("unit"),
+    SearchExtendedSteps(30),
+    # SearchStandard(0,50),
+    UnstuckRandom(1e-5,1);
+    ϵgrad=0.,maxiter=Int(20),showtrace=true,
+    resettimer=true);
+
+
+plotPath(scan,histlsn,p0)
+
+analyse(histlsn,tracelsn,freqs)
+
+
+
 
 # ======================================================================================================================
 ### optimization simulated annealing
@@ -198,8 +230,9 @@ analyse(histsa,tracesa,freqs)
 ### optimization nelder mead
 
 
-homeZero(b)
-move(b,[0.025,0.025]; additive=true)
+p0 = [0.013,0.027]
+
+move(b,p0; additive=false)
 
 ref0 = getTraceG(vna,10)
 objF = ObjRefVNA(vna,ref0)
@@ -208,23 +241,45 @@ objFR(ref) = ObjRefRef(ref,ref0)
 histnm = initHist(b,1001,freqs,objFR(ref0));
 updateHist!(b,histnm,freqs,objFR(ref0))
 
-move(b,[0.0,0.001]; additive=true)
+# move(b,[0.0,0.001]; additive=true)
 
 tracenm = nelderMead(b,histnm,freqs,
-    1.,1+2/b.ndisk,
-    0.75-1/(2*b.ndisk),1-1/(b.ndisk),
+    1.,1+2/b.ndisk,0.75-1/(2*b.ndisk),1-1/(b.ndisk),1e-6,
     objF,
-    InitSimplexCoord(0.002),
+    Dragoon.InitSimplexRegular(0.001,),
     DefaultSimplexSampler,
     UnstuckDont;
-    maxiter=50,
+    maxiter=10,
     showtrace=true,
     showevery=1,
     unstuckisiter=true,
-    forcesimplexobj=false,
+    forcesimplexobj=true,
     resettimer=true);
 
-plotPathHist(histnm,"2_discs_c_scan_20p3G_peak.jld2"; clim=(-0.35,1.55))
-plotPathTrace(tracenm,"2_discs_c_scan_20p3G_peak.jld2";  clim=(-0.35,1.55))
+plotPath(scan,histnm,p0)
+plotPath(scan,tracenm,p0; showsimplex=true)
 
 analyse(histnm,tracenm,freqs)
+
+
+import Dragoon: getSimplexSize, InitSimplexRegular
+const Dragoon.InitSimplexRegular(d) = Callback(Dragoon.initSimplexRegular,(d,))
+
+
+function Dragoon.getSimplexSize(x::Matrix{Float64},f::Vector{Float64})
+    idx = argmin(f)
+
+    s = 0
+
+    for i in eachindex(f)
+        if i == idx; continue; end
+
+        d = pNorm(x[:,i]-x[:,idx])
+
+        if d > s
+            s = d
+        end
+    end
+
+    return s
+end

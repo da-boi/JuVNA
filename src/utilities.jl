@@ -163,7 +163,7 @@ end
 
 
 
-function plotPath(p,hist,p0; l=2,u=1e-3)
+function plotPath(p,hist::Vector{State},p0; l=2,u=1e-3)
     idx = findfirst(x->x.objvalue==0,hist)
     if isnothing(idx); idx = length(hist); else idx -= 1; end
 
@@ -178,4 +178,46 @@ function plotPath(p,hist,p0; l=2,u=1e-3)
     xlims!(p_,-l,l); ylims!(p_,-l,l)
 
     return p_
+end
+
+function plotPath(p,trace::Dragoon.Trace,p0; l=2,u=1e-3)
+    X = zeros(length(trace),2)
+
+    for i in eachindex(trace)
+        X[i,:] = (hist[i].pos-p0)/u
+    end
+
+    p_ = plot!(deepcopy(p),X[:,1],X[:,2];
+        c=:black,linewidth=0.5,legend=false)
+    xlims!(p_,-l,l); ylims!(p_,-l,l)
+
+    return p_
+end
+
+function plotSimplex(p,x::Matrix{Float64},p0; u=1e-3)
+    if size(x,1) != 2; error("Simplex not 2d."); end
+
+    plot!(p,([x[1,:]; x[1,1]].-p0)/u,([x[2,:]; x[2,1]].-p0)/u)
+end
+
+function plotPath(p,trace::Vector{Dragoon.NMTrace},p0; l=2,u=1e-3,showsimplex::Bool=false)
+    if showsimplex
+        p_ = deepcopy(plot)
+
+        for i in eachindex(trace)
+            plotSimplex(p,trace[i].x,p0; u=u)
+        end
+    else
+        X = zeros(length(trace),2)
+
+        for i in eachindex(trace)
+            X[i,:] = (trace[i].x_-p0)/u
+        end
+
+        p_ = plot!(deepcopy(p),X[:,1],X[:,2];
+            c=:black,linewidth=0.5,legend=false)
+        xlims!(p_,-l,l); ylims!(p_,-l,l)
+
+        return p_
+    end
 end

@@ -116,7 +116,7 @@ updateHist!(b,histnm,freqs,Obj)
 move(b,[-0.001,0.000]; additive=true)
 
 tracenm = nelderMead(b,histnm,freqs,
-    1.,1+2/b.ndisk,
+    1.,1+2/b.ndisk,1e-6,
     0.75-1/(2*b.ndisk),1-1/(b.ndisk),
     Obj,
     InitSimplexCoord(0.001),

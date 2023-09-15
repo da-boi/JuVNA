@@ -524,28 +524,24 @@ function getTrace(socket::TCPSocket; waittime=0,set=false)
     return complexFromTrace(Vector(data))
 end
 
-function getTraceG(socket::TCPSocket,n::Int64; waittime=0,set::Bool=false)
+# function getTraceG(socket::TCPSocket,n::Int64; waittime=0,set::Bool=false)
+function getTraceG(socket::TCPSocket; waittime=0)
     clearBuffer(vna)
 
-    if set
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "SENSe:AVERage:STATe ON?\n")
-        send(socket, "SENSe:AVERage:COUNt $n\n")
-        send(socket, "SENS:SWE:GRO:COUN $n;*OPC?\n")
-    end
+    # if set
+    #     send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+    #     send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+    #     send(socket, "SENSe:AVERage:STATe ON;*OPC?\n")
+    #     send(socket, "SENSe:AVERage:COUNt $n;*OPC\n")
+    #     send(socket, "SENS:SWE:GRO:COUN $n;*OPC?\n")
+    # end
     
     send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
     send(socket, "SENSe:SWEep:MODE GROups;*OPC?\n")
-    send(socket, "CALCulate1:DATA? SDATA\n") # Read the S11 parameter Data
-    # Returns
-    # 1 Byte: Block Data Delimiter '#'
-    # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
-    # n Bytes: N := number of data bytes to read in ASCII
-    # N Bytes: data
-    # 1 Byte: End of line character 0x0A to indicate the end of the data block
+    send(socket, "CALCulate1:DATA? SDATA\n")
 
-    # Wait for the Block Data Delimiter '#'
+    sleep(waittime)
+    
     while recv(socket,1)[begin] != 0x23 end
 
     numofdigitstoread = Int(recv(socket,1))
