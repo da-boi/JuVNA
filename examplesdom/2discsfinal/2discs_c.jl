@@ -142,13 +142,13 @@ updateHist!(b,histlsn,freqs,objFR(ref0))
 
 move(b,[0.0,0.001]; additive=true)
 
-@time tracelsn = linesearch(b,histlsn,freqs,10e-6,
+@time tracelsn = linesearch(b,histlsn,freqs,-10e-6,
     objF,
     SolverNewton("inv"),
     Derivator2(5e-6,10e-6,"double"),
     StepNorm("unit"),
-    # SearchExtendedSteps(20),
-    SearchStandard(0,50),
+    SearchExtendedSteps(10),
+    # SearchStandard(0,50),
     UnstuckRandom(1e-5,1);
     ϵgrad=0.,maxiter=Int(5),showtrace=true,
     resettimer=true);
