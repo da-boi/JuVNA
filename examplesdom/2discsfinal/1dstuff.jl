@@ -9,6 +9,9 @@ using Plots
 using BoostFractor
 import Dragoon: move
 
+include(joinpath(pwd(),"src/JuXIMC.jl"))
+include(joinpath(pwd(),"src/utilities.jl"))
+
 
 freqs = genFreqs(20.3e9,1.5e9; length=128);
 # d0 = findpeak(20.3e9,2; eps=9.4,tand=1e-3,thickness=1e-3,dev=0.4,gran=10000)
@@ -29,7 +32,7 @@ Obj = ObjRefLin(ref0)
 
 move(b,p0; additive=false)
 
-steps = 200; dx = 2e-3;
+steps = 100; dx = 2e-3;
 
 histscan = initHist(b,(2*steps+1)^2+1,freqs,Obj);
 updateHist!(b,histscan,freqs,Obj)
@@ -119,7 +122,7 @@ tracenm = nelderMead(b,histnm,freqs,
     1.,1+2/b.ndisk,1e-6,
     0.75-1/(2*b.ndisk),1-1/(b.ndisk),
     Obj,
-    Dragoon.InitSimplexRegular(),
+    InitSimplexRegular(0.001),
     DefaultSimplexSampler,
     UnstuckDont;
     maxiter=50,
