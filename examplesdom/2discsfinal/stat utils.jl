@@ -94,7 +94,7 @@ function plotTerm1(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf)
         if s == 4
             annotate!(p1[s],lx1*0.05,-8,
                 (
-                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) nm\n"*
+                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) µm\n"*
                     L"\eta="*"$succ\n"*
                     L"\overline{f_{\beta,F}}="*"$avg",
                     8,:black,:left
@@ -102,7 +102,7 @@ function plotTerm1(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf)
         else
             annotate!(p1[s],lx1*0.95,-3,
                 (
-                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) nm\n"*
+                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) µm\n"*
                     L"\eta="*"$succ\n"*
                     L"\overline{f_{\beta,F}}="*"$avg",
                     8,:black,:right
@@ -136,7 +136,7 @@ function plotTerm1(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf)
         if s == 4
             annotate!(p2[s],lx2*0.05,-7,
                 (
-                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) nm\n"*
+                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) µm\n"*
                     L"\eta="*"$succ\n"*
                     L"\overline{f_{\beta,F}}="*"$avg",
                     8,:black,:left
@@ -144,7 +144,7 @@ function plotTerm1(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf)
         else
             annotate!(p2[s],lx2*0.95,-3,
                 (
-                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) nm\n"*
+                    L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) µm\n"*
                     L"\eta="*"$succ\n"*
                     L"\overline{f_{\beta,F}}="*"$avg",
                     8,:black,:right
