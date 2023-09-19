@@ -148,8 +148,12 @@ savefig(p2,"20discs_sd_dist.pdf")
 
 
 
-sigx = [1e-6,10e-6,50e-6,100e-6];
-N = 1000; B = zeros(Float64,N,length(freqsplot),length(sigx));
+# ==============================================================================
+
+
+
+
+N = 100; B = zeros(Float64,N,length(freqsplot),length(sigx));
 
 for s in eachindex(sigx)
     print("\nσx = $(sigx[s]), i: 0")
@@ -157,17 +161,25 @@ for s in eachindex(sigx)
     for i in 1:N
         (i%(N/10) == 0) && print(",",i)
 
-        move(b,p0+randn(n)*sigx[s]; additive=false)
+        move(b,dist2pos(pos2dist(p0)+randn(n)*sigx[s]); additive=false)
 
-        B[i,:,s] = getBoost1d(booster,freqsplot)
+        B[i,:,s] = getBoost1d(b,freqsplot)
     end
 end;
 
+move(b,p0; additive=false)
+B0 = getBoost1d(b,freqsplot)
 
-p1 = scatter(freqsplot/1e-9,[B[:,:,1],B[:,:,2],B[:,:,3],B[:,:,4]]'; legend=false,markersize=2,layout=grid(2,2),
-    yflip=true)
+p1 = plot(freqsplot/1e9,[B0,B0,B0,B0]/1e3; legend=false,linesize=5,color=:red,
+    layout=grid(2,2))
 
-xlims!(p1,(0,lx1*1.01)); ylims!(p1,(-15,0.1))
+ylims!(p1,(-10,510)); xticks!(p1,[22.0,22.05])
+
+for i in 1:4
+    plot!(p1[i],freqsplot/1e9,B[:,:,i]'/1e3; c=:black,linesize=0.1,alpha=0.3)
+end;
+
+plot!(p1,freqsplot/1e9,[B0,B0,B0,B0]/1e3; linesize=5,color=:red)
 
 plot!(p1[1]; xformatter=:none,bottom_margin=(-3.5,:mm),right_margin=(0.,:mm))
 plot!(p1[2]; xformatter=:none, yformatter=:none,bottom_margin=(-3.5,:mm),
@@ -175,7 +187,16 @@ plot!(p1[2]; xformatter=:none, yformatter=:none,bottom_margin=(-3.5,:mm),
 plot!(p1[3]; top_margin=(0.,:mm),xlabel=" ",ylabel=" ")
 plot!(p1[4]; yformatter=:none,left_margin=(-3.5,:mm))
 
-annotate!(p1[3],lx1,3,(L"\sum\Delta t"*" [s]",12,:black,:center))
-annotate!(p1[3],-0.175*lx1,-16,(L"f_{\beta,F}",12,90.,:center,:black))
+for s in eachindex(sigx)
+    annotate!(p1[s],21.95,400,
+        (
+            L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) µm\n",
+            8,:black,:left
+        ))
+end
+
+annotate!(p1[3],22.11,-100,(L"f"*" [GHz]",12,:black,:center))
+annotate!(p1[3],21.9176,500,(L"f_{\beta,F}\times 10^3",10,90.,:center,:black))
 
 display(p1)
+
