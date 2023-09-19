@@ -18,23 +18,11 @@ include(joinpath(pwd(),"examplesdom/dragoonstuff.jl"));
 
 include("stages2discs_c.jl");
 
+include("utils.jl")
+
 # ======================================================================================================================
 
 vna = connectVNA();
-
-# setSweepPoints(vna,128)
-# send(vna, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-# send(vna, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-# send(vna, "SENSe:AVERage:STATe ON;*OPC?\n")
-# send(vna, "SENSe:AVERage:STATe OFF;*OPC?\n")
-# send(vna, "SENSe:AVERage:COUNt 10;*OPC\n")
-# send(vna, "SENS:SWE:GRO:COUN 20;*OPC?\n")
-
-# getTrace(vna; set=true)
-
-# getTraceG(vna,10; set=true)
-
-
 
 clearBuffer(vna)
 setCalibration(vna,"{58DE2545-34A1-49C4-8B5D-59D0B5E1435B}")
@@ -50,23 +38,22 @@ send(vna, "CALCulate:MEASure:FILTER:TIME:STARt 36e-10;*OPC?\n")
 send(vna, "CALCulate:MEASure:FILTER:TIME:STOP 9e-9;*OPC?\n")
 send(vna, "CALCulate:MEASure:FORMat MLIN\n")
 
-send(vna, "FORMat:DATA REAL,64;*OPC?\n") # Set the return type to a 64 bit Float
-send(vna, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-
-send(vna, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
 setSweepPoints(vna,2*128)
+freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
 
+send(vna, "FORMat:DATA REAL,64;*OPC?\n")
+send(vna, "FORMat:BORDer SWAPPed;*OPC?\n")
+send(vna, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
 
 getTraceM(vna)
 
 
 
-freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
 
 function objRefVNA(booster::Booster,freqs::Vector{Float64},(vna,ref0)::Tuple{TCPSocket,Vector{ComplexF64}})
     # sleep(1)
 
-    ref = getTraceM(vna,10; nfreqs=length(freqs))
+    ref = getTraceM(vna,100; nfreqs=length(freqs))
 
     return sum(abs.(ref-ref0))
 end
@@ -94,7 +81,7 @@ move(b,p0; additive=false);
 # @time getTraceG(vna);
 # @time getTrace(vna);
 @time getTraceM(vna);
-@time getTraceM(vna,10);
+@time getTraceM(vna,10; nfreqs=256);
 
 # ======================================================================================================================
 ### scan
@@ -102,7 +89,7 @@ move(b,p0; additive=false);
 
 move(b,p0; additive=false)
 
-ref0 = getTraceM(vna,100)
+ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objFR(ref) = ObjRefRef(ref,ref0)
 
 steps = 20; dx = 2e-3;
@@ -116,35 +103,38 @@ R = zeros(ComplexF64,2*steps+1,2*steps+1,length(ref0))
     
     move(b,p0+[i*dx/steps,j*dx/steps]; additive=false)
     
-    ref = getTraceM(vna,100)
+    ref = getTraceM(vna,100; nfreqs=length(freqs))
     updateHist!(b,histscan,freqs,objFR(ref))
     R[i+steps+1,j+steps+1,:] = ref
 end
 
-scan1 = makeScan(histscan; clim=(-0.1,0.8),n=steps)
+scan = makeScan(histscan; clim=(-0.25,1.15),n=steps)
+# makeScan1(histscan; clim=(0,14),n=steps)
 
-@save "2_discs_c_scan_20p3G_peak_18_09_zoom.jld2" ref0 histscan R freqs
+# @save "2_discs_c_scan_20p3G_peak_19_09_.jld2" ref0 histscan R freqs
+saveStuff("\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data",ref0,histscan,R,freqs)
+saveScan("\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data",scan)
 
 # ======================================================================================================================
 ### optimization linesearch steepest
 
 move(b,p0; additive=false)
 
-ref0 = getTraceM(vna,20)
+ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
 histls = initHist(b,10001,freqs,objFR(ref0));
 updateHist!(b,histls,freqs,objFR(ref0))
 
 move(b,[0.0,0.001]; additive=true)
-
+b.summeddistance = 0
 @time tracels = linesearch(b,histls,freqs,10e-6,
     objF,
     SolverSteep,
     Derivator1(5e-6,"double"),
     StepNorm("unit"),
-    SearchExtendedSteps(20),
-    UnstuckRandom(1e-5,1);
+    SearchExtendedSteps(50),
+    UnstuckRandom(1e-4,1);
     ϵgrad=0.,maxiter=Int(10),showtrace=true,
     resettimer=true);
 
@@ -157,14 +147,14 @@ analyse(histls,tracels,freqs)
 
 move(b,p0; additive=false)
 
-ref0 = getTraceM(vna,20)
+ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
 histlsn = initHist(b,10001,freqs,objFR(ref0));
 updateHist!(b,histlsn,freqs,objFR(ref0))
 
 move(b,[0.0,0.001]; additive=true)
-
+b.summeddistance = 0
 @time tracelsn = linesearch(b,histlsn,freqs,-10e-6,
     objF,
     SolverNewton("inv"),
@@ -195,7 +185,7 @@ histlsn = initHist(b,10001,freqs,objFR(ref0));
 updateHist!(b,histlsn,freqs,objFR(ref0))
 
 move(b,[0.0,0.001]; additive=true)
-
+b.summeddistance = 0
 @time tracelsn = linesearch(b,histlsn,freqs,10e-6,
     objF,
     SolverHybrid("inv",0,10e-6,1),
@@ -231,7 +221,7 @@ updateHist!(b,histsa,freqs,objFR(ref0))
 move(b,[0.0,0.001]; additive=true)
 
 T = collect(range(1,0,1000))
-
+b.summeddistance = 0
 @time tracesa = simulatedAnnealing(b,histsa,freqs,T,100e-6,
     objF,
     UnstuckDont;
@@ -255,29 +245,31 @@ p0 = [0.013,0.027]
 
 move(b,p0; additive=false)
 
-ref0 = getTraceM(vna,20)
+ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
 histnm = initHist(b,1001,freqs,objFR(ref0));
 updateHist!(b,histnm,freqs,objFR(ref0))
 
-# move(b,[0.0,0.001]; additive=true)
+move(b,[0.0,0.001]; additive=true)
 
+b.summeddistance = 0
 tracenm = nelderMead(b,histnm,freqs,
     1.,1+2/b.ndisk,0.75-1/(2*b.ndisk),1-1/(b.ndisk),1e-6,
     objF,
-    Dragoon.InitSimplexRegular(0.001,),
+    Dragoon.InitSimplexRegular(0.0005,),
     DefaultSimplexSampler,
     UnstuckDont;
-    maxiter=10,
-    showtrace=true,
+    maxiter=20,
+    showtrace=false,
     showevery=1,
     unstuckisiter=true,
-    forcesimplexobj=true,
+    forcesimplexobj=false,
     resettimer=true);
 
 plotPath(scan,histnm,p0)
 plotPath(scan,tracenm,p0; showsimplex=true)
 
 analyse(histnm,tracenm,freqs)
+
 
