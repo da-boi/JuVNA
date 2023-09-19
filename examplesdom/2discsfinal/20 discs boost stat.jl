@@ -161,7 +161,7 @@ for s in eachindex(sigx)
     for i in 1:N
         (i%(N/10) == 0) && print(",",i)
 
-        move(b,p0+randn(n)*sigx[s]; additive=false)
+        move(b,dist2pos(pos2dist(p0)+randn(n)*sigx[s]); additive=false)
 
         B[i,:,s] = getBoost1d(b,freqsplot)
     end
