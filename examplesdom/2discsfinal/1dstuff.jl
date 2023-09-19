@@ -133,3 +133,7 @@ tracenm = nelderMead(b,histnm,freqs,
     resettimer=true);
 
 plotPath(scan,histnm,p0; u=1e-3,l=2)
+
+
+
+

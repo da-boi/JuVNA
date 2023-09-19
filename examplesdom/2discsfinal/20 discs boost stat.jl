@@ -63,7 +63,7 @@ savefig(p1,"20discs_nm_time.pdf")
 savefig(p2,"20discs_nm_dist.pdf")
 
 # ==============================================================================
-
+# simulated annealing
 
 
 
@@ -147,3 +147,35 @@ savefig(p2,"20discs_sd_dist.pdf")
 
 
 
+
+sigx = [1e-6,10e-6,50e-6,100e-6];
+N = 1000; B = zeros(Float64,N,length(freqsplot),length(sigx));
+
+for s in eachindex(sigx)
+    print("\nσx = $(sigx[s]), i: 0")
+
+    for i in 1:N
+        (i%(N/10) == 0) && print(",",i)
+
+        move(b,p0+randn(n)*sigx[s]; additive=false)
+
+        B[i,:,s] = getBoost1d(booster,freqsplot)
+    end
+end;
+
+
+p1 = scatter(freqsplot/1e-9,[B[:,:,1],B[:,:,2],B[:,:,3],B[:,:,4]]'; legend=false,markersize=2,layout=grid(2,2),
+    yflip=true)
+
+xlims!(p1,(0,lx1*1.01)); ylims!(p1,(-15,0.1))
+
+plot!(p1[1]; xformatter=:none,bottom_margin=(-3.5,:mm),right_margin=(0.,:mm))
+plot!(p1[2]; xformatter=:none, yformatter=:none,bottom_margin=(-3.5,:mm),
+    left_margin=(-3.5,:mm))
+plot!(p1[3]; top_margin=(0.,:mm),xlabel=" ",ylabel=" ")
+plot!(p1[4]; yformatter=:none,left_margin=(-3.5,:mm))
+
+annotate!(p1[3],lx1,3,(L"\sum\Delta t"*" [s]",12,:black,:center))
+annotate!(p1[3],-0.175*lx1,-16,(L"f_{\beta,F}",12,90.,:center,:black))
+
+display(p1)
