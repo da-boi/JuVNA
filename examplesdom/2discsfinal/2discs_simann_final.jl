@@ -39,24 +39,22 @@ send(vna, "CALCulate:MEASure:FILTER:TIME:STARt 36e-10;*OPC?\n")
 send(vna, "CALCulate:MEASure:FILTER:TIME:STOP 9e-9;*OPC?\n")
 send(vna, "CALCulate:MEASure:FORMat MLIN\n")
 
-setSweepPoints(vna,2*128)
+setSweepPoints(vna,128)
+# setSweepPoints(vna,2*128)
 freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
 
 send(vna, "FORMat:DATA REAL,64;*OPC?\n")
 send(vna, "FORMat:BORDer SWAPPed;*OPC?\n")
 send(vna, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
 
-getTraceM(vna)
+getTrace(vna)
 
 
-
+# ======================================================================================================================
 
 
 function objRefVNA(booster::Booster,freqs::Vector{Float64},(vna,ref0)::Tuple{TCPSocket,Vector{ComplexF64}})
-    # sleep(1)
-
-    ref = getTraceM(vna,10; nfreqs=length(freqs))
-    # ref = getTraceM(vna)
+    ref = getTrace(vna,10; nfreqs=length(freqs))
 
     return sum(abs.(ref-ref0))
 end
@@ -80,10 +78,14 @@ p0 = [0.013,0.027]
 move(b,p0; additive=false);
 @time getTraceG(vna);
 
-dx = [-1,-0.5,0,0.5,1]*1e-3
+dx = [-0.5,-0.25,0,0.25,0.5]*1e-3
 
 # ======================================================================================================================
 ### optimization simulated annealing
+
+@load "\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data\\scans\\19_9_2023-13_57.jld2"### fix
+scan = makeScan(histscan; clim=(-0.25,1.15),n=steps)
+
 
 Traces = []; Hists = []; Times = []; DX = []; Ref0 = []
 T = collect(range(0.1,0,1001))
@@ -92,7 +94,7 @@ for j in 1:5
     for i in 1:5
         move(b,p0; additive=false)
         
-        ref0 = getTraceM(vna,100)
+        ref0 = getTrace(vna,100; nfreqs=length(freqs))
         objF = ObjRefVNA(vna,ref0)
         
         histsa = initHist(b,1001,freqs,objFR(ref0));
@@ -115,3 +117,5 @@ for j in 1:5
         push!(Traces,tracesa); push!(hists,histsa); push!(Times,termsa); push!(DX,(dx[i],dx[j])); push!(Ref0,ref0)
     end
 end
+
+@save "\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data\\fulls\\SA\\"*getDateString()*".jld2" Traces, Hists, Times, DX, Ref0, T
