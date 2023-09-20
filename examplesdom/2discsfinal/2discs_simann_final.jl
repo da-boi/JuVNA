@@ -12,33 +12,51 @@ using JLD2
 using LaTeXStrings
 
 
+
 include(joinpath(pwd(),"src/vna_control.jl"));
 include(joinpath(pwd(),"src/JuXIMC.jl"));
 include(joinpath(pwd(),"examplesdom/dragoonstuff.jl"));
 
 include("stages2discs_c.jl");
 
+include("utils.jl")
+
 # ======================================================================================================================
 
 vna = connectVNA();
 
-# setSweepPoints(vna,128)
-send(vna, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-send(vna, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-send(vna, "SENSe:AVERage:STATe ON;*OPC?\n")
-send(vna, "SENSe:AVERage:COUNt 10;*OPC\n")
-send(vna, "SENS:SWE:GRO:COUN 12;*OPC?\n")
+clearBuffer(vna)
+setCalibration(vna,"{58DE2545-34A1-49C4-8B5D-59D0B5E1435B}")
 
-getTraceG(vna,10; set=true)
+setFrequencies(vna,20.31e9,1.5e9)
+setPowerLevel(vna,0)
+setAveraging(vna,false)
+setIFBandwidth(vna,Int(100e3))
 
+send(vna, "CALCulate1:PARameter:SELect 'CH1_S11_1';*OPC?\n")
+send(vna, "CALCulate:MEASure:FILTER:TIME:STATe ON\n")
+send(vna, "CALCulate:MEASure:FILTER:TIME:STARt 36e-10;*OPC?\n")
+send(vna, "CALCulate:MEASure:FILTER:TIME:STOP 9e-9;*OPC?\n")
+send(vna, "CALCulate:MEASure:FORMat MLIN\n")
 
-
+setSweepPoints(vna,2*128)
 freqs = collect(Float64,getFreqAsBinBlockTransfer(vna))
+
+send(vna, "FORMat:DATA REAL,64;*OPC?\n")
+send(vna, "FORMat:BORDer SWAPPed;*OPC?\n")
+send(vna, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+
+getTraceM(vna)
+
+
+
+
 
 function objRefVNA(booster::Booster,freqs::Vector{Float64},(vna,ref0)::Tuple{TCPSocket,Vector{ComplexF64}})
     # sleep(1)
 
-    ref = getTraceG(vna,10)
+    ref = getTraceM(vna,10; nfreqs=length(freqs))
+    # ref = getTraceM(vna)
 
     return sum(abs.(ref-ref0))
 end
@@ -48,7 +66,6 @@ function objRefRef(booster::Booster,freqs::Vector{Float64},(ref,ref0)::Tuple{Vec
 end
 
 ObjRefVNA(vna,ref0) = Callback(objRefVNA,(vna,ref0))
-ObjRefRef(ref,ref0) = Callback(objRefRef,(ref,ref0));
 
 # ======================================================================================================================
 
@@ -68,16 +85,15 @@ dx = [-1,-0.5,0,0.5,1]*1e-3
 # ======================================================================================================================
 ### optimization simulated annealing
 
-Traces = []; Hists = []; Times = []; DX = []
-T = collect(range(1,0,1001))
+Traces = []; Hists = []; Times = []; DX = []; Ref0 = []
+T = collect(range(0.1,0,1001))
 
 for j in 1:5
     for i in 1:5
         move(b,p0; additive=false)
         
-        ref0 = getTraceG(vna,10)
+        ref0 = getTraceM(vna,100)
         objF = ObjRefVNA(vna,ref0)
-        objFR(ref) = ObjRefRef(ref,ref0)
         
         histsa = initHist(b,1001,freqs,objFR(ref0));
         updateHist!(b,histsa,freqs,objFR(ref0))
@@ -96,6 +112,6 @@ for j in 1:5
             traceevery=1,
             resettimer=true);
 
-        push!(Traces,tracesa); push!(hists,histsa); push!(Times,termsa); push!(DX,(dx[i],dx[j]));
+        push!(Traces,tracesa); push!(hists,histsa); push!(Times,termsa); push!(DX,(dx[i],dx[j])); push!(Ref0,ref0)
     end
 end

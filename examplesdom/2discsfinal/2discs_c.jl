@@ -53,7 +53,8 @@ getTraceM(vna)
 function objRefVNA(booster::Booster,freqs::Vector{Float64},(vna,ref0)::Tuple{TCPSocket,Vector{ComplexF64}})
     # sleep(1)
 
-    ref = getTraceM(vna,100; nfreqs=length(freqs))
+    ref = getTraceM(vna,10; nfreqs=length(freqs))
+    # ref = getTraceM(vna)
 
     return sum(abs.(ref-ref0))
 end
@@ -81,11 +82,11 @@ move(b,p0; additive=false);
 # @time getTraceG(vna);
 # @time getTrace(vna);
 @time getTraceM(vna);
-@time getTraceM(vna,10; nfreqs=256);
+@time getTraceM(vna,100; nfreqs=length(freqs));
 
 # ======================================================================================================================
 ### scan
-# @load "2_discs_c_scan_20p3G_peak_11_09.jld2"
+@load "\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data\\scans\\19_9_2023-13_57.jld2"
 
 move(b,p0; additive=false)
 
@@ -123,8 +124,8 @@ move(b,p0; additive=false)
 ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
-histls = initHist(b,10001,freqs,objFR(ref0));
-updateHist!(b,histls,freqs,objFR(ref0))
+histls = initHist(b,10001,freqs,objF);
+updateHist!(b,histls,freqs,objF)
 
 move(b,[0.0,0.001]; additive=true)
 b.summeddistance = 0
@@ -150,26 +151,31 @@ move(b,p0; additive=false)
 ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
-histlsn = initHist(b,10001,freqs,objFR(ref0));
-updateHist!(b,histlsn,freqs,objFR(ref0))
+histnw = initHist(b,10001,freqs,objF);
+updateHist!(b,histnw,freqs,objF)
 
 move(b,[0.0,0.001]; additive=true)
 b.summeddistance = 0
-@time tracelsn = linesearch(b,histlsn,freqs,-10e-6,
+@time tracenw = linesearch(b,histnw,freqs,-10e-6,
     objF,
     SolverNewton("inv"),
     Derivator2(5e-6,10e-6,"double"),
     StepNorm("unit"),
     SearchExtendedSteps(10),
     # SearchStandard(0,50),
-    UnstuckRandom(1e-5,1);
+    UnstuckRandom(1e-4,1);
     ϵgrad=0.,maxiter=Int(5),showtrace=true,
     resettimer=true);
 
 
 
-plotPath(scan,histlsn,p0)
-analyse(histlsn,tracelsn,freqs)
+
+plotPath(scan,histnw,p0)
+plotPath(scan,tracenw,p0)
+# analyse(histnm,tracenm,freqs)
+
+saveStuff("\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data\\","NW",scan,ref0,histnw,tracenw,freqs; p0=p0)
+    
 
 
 # ======================================================================================================================
@@ -178,31 +184,33 @@ analyse(histlsn,tracelsn,freqs)
 
 move(b,p0; additive=false)
 
-ref0 = getTraceM(vna,20)
+ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
-histlsn = initHist(b,10001,freqs,objFR(ref0));
-updateHist!(b,histlsn,freqs,objFR(ref0))
+histhyb = initHist(b,10001,freqs,objF);
+updateHist!(b,histhyb,freqs,objF)
 
 move(b,[0.0,0.001]; additive=true)
 b.summeddistance = 0
-@time tracelsn = linesearch(b,histlsn,freqs,10e-6,
+@time tracehyb = linesearch(b,histhyb,freqs,10e-6,
     objF,
     SolverHybrid("inv",0,10e-6,1),
     Derivator2(5e-6,10e-6,"double"),
     StepNorm("unit"),
-    SearchExtendedSteps(30),
+    SearchExtendedSteps(50),
     # SearchStandard(0,50),
-    UnstuckRandom(1e-5,1);
+    UnstuckRandom(1e-4,1);
     ϵgrad=0.,maxiter=Int(20),showtrace=true,
     resettimer=true);
 
 
-plotPath(scan,histlsn,p0)
 
-analyse(histlsn,tracelsn,freqs)
+plotPath(scan,histhyb,p0)
+plotPath(scan,tracehyb,p0)
+analyse(histhyb,tracehyb,freqs)
 
-
+saveStuff("\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data\\","HY",scan,ref0,histhyb,tracehyb,freqs; p0=p0)
+    
 
 
 # ======================================================================================================================
@@ -212,30 +220,35 @@ p0 = [0.013,0.027]
 
 move(b,p0; additive=false)
 
-ref0 = getTraceM(vna,20)
+ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
-histsa = initHist(b,1001,freqs,objFR(ref0));
-updateHist!(b,histsa,freqs,objFR(ref0))
+histsa = initHist(b,1001,freqs,objF);
+updateHist!(b,histsa,freqs,objF)
 
-move(b,[0.0,0.001]; additive=true)
+move(b,[-0.001,0.001]; additive=true)
 
-T = collect(range(1,0,1000))
+T = collect(range(0.2,0,501))
 b.summeddistance = 0
-@time tracesa = simulatedAnnealing(b,histsa,freqs,T,100e-6,
+@time tracesa = simulatedAnnealing(b,histsa,freqs,T,200e-6,
     objF,
     UnstuckDont;
+    nreset=50,
+    nresetterm=2,
     maxiter=length(T),
     showtrace=true,
     showevery=trunc(Int64,length(T)/20),
     unstuckisiter=true,
     traceevery=1,
-    resettimer=true);
+    resettimer=true); tracesa = tracesa[1:end-1]
 
-plotPathHist(histsa,"2_discs_c_scan_20p3G_peak.jld2"; clim=(-0.35,1.55))
-plotPathTrace(tracesa[1:end-1],"2_discs_c_scan_20p3G_peak.jld2";  clim=(-0.35,1.55))
-analyse(histsa,tracesa,freqs)
+plotPath(scan,histsa,p0)
+plotPath(scan,tracesa,p0)
+# analyse(histnm,tracenm,freqs)
 
+saveStuff("\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data\\","SA",scan,ref0,histsa,tracesa,freqs; p0=p0)
+    
+    
 
 # ======================================================================================================================
 ### optimization nelder mead
@@ -248,10 +261,10 @@ move(b,p0; additive=false)
 ref0 = getTraceM(vna,100; nfreqs=length(freqs))
 objF = ObjRefVNA(vna,ref0)
 
-histnm = initHist(b,1001,freqs,objFR(ref0));
-updateHist!(b,histnm,freqs,objFR(ref0))
+histnm = initHist(b,1001,freqs,objF);
+updateHist!(b,histnm,freqs,objF)
 
-move(b,[0.0,0.001]; additive=true)
+move(b,[-0.001,0.001]; additive=true)
 
 b.summeddistance = 0
 tracenm = nelderMead(b,histnm,freqs,
@@ -261,7 +274,7 @@ tracenm = nelderMead(b,histnm,freqs,
     DefaultSimplexSampler,
     UnstuckDont;
     maxiter=20,
-    showtrace=false,
+    showtrace=true,
     showevery=1,
     unstuckisiter=true,
     forcesimplexobj=false,
@@ -269,7 +282,7 @@ tracenm = nelderMead(b,histnm,freqs,
 
 plotPath(scan,histnm,p0)
 plotPath(scan,tracenm,p0; showsimplex=true)
+# analyse(histnm,tracenm,freqs)
 
-analyse(histnm,tracenm,freqs)
-
+saveStuff("\\\\inst3\\data\\Benutzer\\bergermann\\Desktop\\final data\\","NM",scan,ref0,histnm,tracenm,freqs; p0=p0)
 
