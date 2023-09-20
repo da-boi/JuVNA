@@ -42,8 +42,8 @@ for s in eachindex(sigx)
             # InitSimplexRegular(5e-5),
             InitSimplexCoord(1e-5),
             DefaultSimplexSampler,
-            UnstuckDont;
-            maxiter=10000,
+            UnstuckNew(InitSimplexRegular(1e-5),true,-10000);
+            maxiter=1000,
             showtrace=false,
             unstuckisiter=true,
             resettimer=true,
@@ -56,7 +56,7 @@ for s in eachindex(sigx)
     end
 end;
 
-plotTerm(Term,sigx; maxt=1000,maxdist=500);
+plotTerm(Term,sigx; maxt=10000,maxdist=10000);
 
 p1, p2 = plotTerm(Term,sigx; maxt=1000,maxdist=500)
 savefig(p1,"20discs_nm_time.pdf")
@@ -106,13 +106,13 @@ savefig(p1,"20discs_sa_time.pdf")
 savefig(p2,"20discs_sa_dist.pdf")
 
 # ==============================================================================
+# steepest descent
 
 
 
+N = 100; Term = zeros(Float64,N,4,length(sigx));
 
-N = 10; Term = zeros(Float64,N,4,length(sigx));
-
-for s in eachindex(sigx[1:2])
+for s in eachindex(sigx)
     print("\nσx = $(sigx[s]), i: 0")
 
     for i in 1:N
@@ -123,12 +123,103 @@ for s in eachindex(sigx[1:2])
         hist = initHist(b,100,freqs,ObjAnalytical)
         b.summeddistance = 0.
 
-        trace, term = linesearch(b,hist,freqs,1e-6,
+        trace, term = linesearch(b,hist,freqs,10e-6,
             ObjAnalytical,
             SolverSteep,
-            Derivator1(1e-9,"double"),
+            Derivator1(1e-6,"double"),
             StepNorm("unit"),
-            SearchExtendedSteps(100),
+            SearchExtendedSteps(10),
+            UnstuckRandom(1e-5,-13000);
+            ϵgrad=0.,maxiter=Int(1000),showtrace=false,
+            resettimer=true,returntimes=true);        
+
+        Term[i,1,s] = term[1]
+        Term[i,2,s] = term[2][1].value
+        Term[i,3,s] = term[2][2]
+        Term[i,4,s] = term[2][3].value
+    end
+end; plotTerm(Term,sigx);
+
+bu = copy(Term)
+
+p1, p2 = plotTerm(Term,sigx; annpos=[(0.95,0.2),(0.95,0.2),(0.35,0.2),(0.35,0.2)])
+savefig(p1,"20discs_sd_time.pdf")
+savefig(p2,"20discs_sd_dist.pdf")
+
+
+
+
+# ==============================================================================
+# newton method
+
+
+
+N = 10; Term = zeros(Float64,N,4,length(sigx));
+
+for s in eachindex(sigx)
+    print("\nσx = $(sigx[s]), i: 0")
+
+    for i in 1:N
+        (i%(N/10) == 0) && print(",",i)
+
+        move(b,p0+randn(n)*sigx[s]; additive=false)
+
+        hist = initHist(b,100,freqs,ObjAnalytical)
+        b.summeddistance = 0.
+
+        trace, term = linesearch(b,hist,freqs,-1e-5,
+            ObjAnalytical,
+            SolverNewton("inv"),
+            Dragoon.Derivator2_(1e-5,1e-6,"double"),
+            StepNorm("unit"),
+            SearchExtendedSteps(20),
+            # UnstuckDont;
+            UnstuckRandom(1e-5,-13000);
+            ϵgrad=0.,maxiter=Int(100),showtrace=false,
+            resettimer=true,returntimes=true);        
+
+        Term[i,1,s] = term[1]
+        Term[i,2,s] = term[2][1].value
+        Term[i,3,s] = term[2][2]
+        Term[i,4,s] = term[2][3].value
+    end
+end; plotTerm(Term,sigx);
+
+
+p1, p2 = plotTerm1(Term,sigx)
+savefig(p1,"20discs_nw_time.pdf")
+savefig(p2,"20discs_nw_dist.pdf")
+
+
+
+
+
+
+# ==============================================================================
+# hybrid method
+
+
+
+N = 5; Term = zeros(Float64,N,4,length(sigx));
+
+for s in eachindex(sigx)
+    print("\nσx = $(sigx[s]), i: 0")
+
+    for i in 1:N
+        (i%(N/10) == 0) && print(",",i)
+
+        move(b,p0+randn(n)*sigx[s]; additive=false)
+
+        hist = initHist(b,100,freqs,ObjAnalytical)
+        b.summeddistance = 0.
+
+        trace, term = linesearch(b,hist,freqs,10e-6,
+            ObjAnalytical,
+            SolverHybrid("inv",0,10e-6,1),
+            Dragoon.Derivator2_(1e-6,1e-6,"double"),
+            StepNorm("unit"),
+            SearchExtendedSteps(20),
+            # UnstuckDont;
             UnstuckRandom(1e-5,-13000);
             ϵgrad=0.,maxiter=Int(300),showtrace=false,
             resettimer=true,returntimes=true);        
@@ -142,13 +233,56 @@ end; plotTerm(Term,sigx);
 
 
 p1, p2 = plotTerm1(Term,sigx)
-savefig(p1,"20discs_sd_time.pdf")
-savefig(p2,"20discs_sd_dist.pdf")
+savefig(p1,"20discs_hy_time.pdf")
+savefig(p2,"20discs_hy_dist.pdf")
 
 
 
 
-# ==============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
