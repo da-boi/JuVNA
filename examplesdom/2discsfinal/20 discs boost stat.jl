@@ -63,7 +63,7 @@ savefig(p1,"20discs_nm_time.pdf")
 savefig(p2,"20discs_nm_dist.pdf")
 
 # ==============================================================================
-
+# simulated annealing
 
 
 
