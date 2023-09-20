@@ -1,7 +1,8 @@
 using Statistics
 using LaTeXStrings
 
-function plotTerm(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf)
+function plotTerm(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf,
+        annpos=[(0.95,0.2),(0.95,0.2),(0.95,0.2),(0.95,0.2)],ylims=(-15,0.1))
     obj = T[:,1,:]
     ttot = T[:,2,:]
     dist = T[:,3,:]
@@ -12,13 +13,13 @@ function plotTerm(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf)
     p1 = scatter(ttot,obj/1e3; legend=false,markersize=2,layout=grid(2,2),
         yflip=true)
 
-    xlims!(p1,(0,lx1*1.01)); ylims!(p1,(-15,0.1))
+    xlims!(p1,(0,lx1*1.01)); ylims!(p1,ylims)
 
     for s in eachindex(sigx)
         N = size(T,1); nsuccess = sum(T[:,1,s] .<= threshold)
         succ = nsuccess/N; avg = round(Int,mean(T[:,1,s]))
 
-        annotate!(p1[s],lx1*0.95,-3,
+        annotate!(p1[s],lx1*annpos[s][1],ylims[1]*annpos[s][2],
             (
                 L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) µm\n"*
                 L"\eta="*"$succ\n"*
@@ -44,13 +45,13 @@ function plotTerm(T,sigx; threshold=-10_000,maxt=Inf,maxdist=Inf)
     p2 = scatter(dist/1e-3,obj/1e3; legend=false,markersize=2,layout=grid(2,2),
         yflip=true)
 
-    xlims!(p2,(0,lx2*1.01)); ylims!(p2,(-15,0.1))
+    xlims!(p2,(0,lx2*1.01)); ylims!(p2,ylims)
 
     for s in eachindex(sigx)
         N = size(T,1); nsuccess = sum(T[:,1,s] .<= threshold)
         succ = nsuccess/N; avg = round(Int,mean(T[:,1,s]))
 
-        annotate!(p2[s],lx2*0.95,-3,
+        annotate!(p2[s],lx2*annpos[s][1],ylims[1]*annpos[s][2],
             (
                 L"\sigma_x="*"$(round(Int,sigx[s]/1e-6)) µm\n"*
                 L"\eta="*"$succ\n"*
