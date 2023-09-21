@@ -19,17 +19,33 @@ function saveStuff(folderpath::String,optimizer::String,scan,ref0,hist,trace,fre
     d = getDateString()
 
     ph = plotPath(scan,hist,p0)
-    pt = plotPath(scan,trace,p0)
 
-    objf = round(Int,trace[end].obj)
+    if trace[1] isa Dragoon.NMTrace
+        pt = plotPath(scan,trace,p0; showsimplex=true)
+    else
+        pt = plotPath(scan,trace,p0)
+    end
+
+    # objf = round(minimum(trace[end].obj);sig)
 
     pa = analyse(hist,trace,freqs)
 
-    jldsave(joinpath(folderpath,"optims",optimizer*"_"*objf*"_"*d*".jld2"); ref0,hist,trace,freqs)
-    savefig(ph,joinpath(folderpath,"optims",optimizer*"_hist_"*objf*"_"*d*".pdf"))
-    savefig(pt,joinpath(folderpath,"optims",optimizer*"_trace_"*objf*"_"*d*".pdf"))
+    jldsave(joinpath(folderpath,"optims",optimizer*"_"*d*".jld2"); ref0,hist,trace,freqs)
+    savefig(ph,joinpath(folderpath,"optims",optimizer*"_hist_"*d*".pdf"))
+    savefig(pt,joinpath(folderpath,"optims",optimizer*"_trace_"*d*".pdf"))
 
-    savefig(pa,joinpath(folderpath,"optims",optimizer*"_hist_"*objf*"_"*d*".pdf"))
+    if trace[1] isa Dragoon.NMTrace || trace[1] isa Dragoon.SATrace 
+        savefig(pa[2],joinpath(folderpath,"optims",optimizer*"_a2_"*d*".pdf"))
+        savefig(pa[3],joinpath(folderpath,"optims",optimizer*"_a3_"*d*".pdf"))
+        savefig(pa[5],joinpath(folderpath,"optims",optimizer*"_a5_"*d*".pdf"))
+        savefig(pa[6],joinpath(folderpath,"optims",optimizer*"_a6_"*d*".pdf"))
+    else
+        savefig(pa[2],joinpath(folderpath,"optims",optimizer*"_a2_"*d*".pdf"))
+        savefig(pa[3],joinpath(folderpath,"optims",optimizer*"_a3_"*d*".pdf"))
+        savefig(pa[5],joinpath(folderpath,"optims",optimizer*"_a5_"*d*".pdf"))
+    end
+
+    return
 end
 
 

@@ -529,6 +529,48 @@ function getTrace(socket::TCPSocket; waittime=0,set=false)
     return complexFromTrace(Vector(data))
 end
 
+function getTrace(socket::TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
+    ref = zeros(ComplexF64,nfreqs)
+
+    if n == 1
+        return getTrace(socket; waittime=waittime,set=set)
+    end
+    
+    if set
+        clearBuffer(vna)
+
+        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+    end
+
+    for i in 1:n
+        clearBuffer(vna)
+
+        send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+        send(socket, "CALC:DATA? SDATA\n") 
+
+        while recv(socket,1)[begin] != 0x23 end
+
+        numofdigitstoread = Int(recv(socket,1))
+        numofbytes = Int(recv(socket, numofdigitstoread))
+        bytes = recv(socket, numofbytes)
+        data = reinterpret(Float64, bytes)
+        hanginglinefeed = recv(socket,1)
+        
+        if hanginglinefeed[begin] != 0x0A
+            error("End of Line Character expected to indicate end of data block")
+        end
+
+        if i == n
+            return ref/n
+        else
+            ref += complexFromTrace(Vector(data))
+        end
+    end
+end
+
+
 function getTraceM(socket::TCPSocket; waittime=0,set=false)
     clearBuffer(vna)
 
