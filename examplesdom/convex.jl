@@ -93,20 +93,29 @@ for a in A
 end
 
 
-plot(A,B; legend=false)
+p2 = plot(A,B/1e3; legend=false)
 xlabel!(L"\alpha")
-ylabel!(L"f(\alpha)")
-
+ylabel!("Objective Value "*L"f_{\beta}(\alpha)")
+annotate!(-0.22,-15,(L"\times 10^3",10,:left))
 
 freqsplot = genFreqs(22.025e9,150e6; length=1001)
 
-p1 = plot(freqsplot/1e9,boost1d(d1,freqsplot); label="Solution A",c=:blue,layout=grid(2,1,heights=[0.8,0.2]),subplot=1)
-plot!(freqsplot/1e9,boost1d(d2,freqsplot); label="Solution B",c=:red,subplot=1)
-xlabel!(L"f"*" [GHz]")
-ylabel!(L"\beta^2")
+p1 = plot(freqsplot/1e9,boost1d(d1,freqsplot)/1e3; label="Solution A",c=:blue,layout=grid(2,1,heights=[0.8,0.2]),subplot=1)
+plot!(p1[1],freqsplot/1e9,boost1d(d2,freqsplot)/1e3; label="Solution B",c=:red,subplot=1)
+annotate!(p1[1],(minimum(freqsplot)+-(extrema(freqsplot)...)*0.1)/1e9,
+            -2000/1e3,(L"\times 10^3",10,:left))
+xlabel!(p1[1],"Frequency [GHz]")
+ylabel!(p1[1],"Power Boost Factor "*L"\beta^2")
+vline!(p1[1],[22,22.05], c="black", linestyle=:dash,label="")
+xticks!([21.95,22.0,22.05,22.1])
 
 
-scatter!(1:20,d1*1e3; label="Solution A",c=:blue,subplot=2,ylims=[6.8,7.6],legend=false)
-scatter!(1:20,d2*1e3; label="Solution B",c=:red,subplot=2,legend=false)
-xlabel!("Disc index",subplot=2)
-ylabel!(L"d_i"*" [mm]",subplot=2)
+
+scatter!(p1[2],1:20,d1*1e3; label="Solution A",c=:blue,subplot=2,ylims=[6.8,7.6],legend=false)
+scatter!(p1[2],1:20,d2*1e3; label="Solution B",c=:red,subplot=2,legend=false)
+xlabel!(p1[2],"Disc index",subplot=2)
+ylabel!(p1[2],L"d_i"*" [mm]",subplot=2)
+
+
+savefig(p1,"convex1.pdf")
+savefig(p2,"convex2.pdf")
