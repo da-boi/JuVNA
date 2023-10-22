@@ -9,7 +9,6 @@ module VNA
 
 import Sockets
 
-
 export
     connect,
     disconnect,
@@ -20,8 +19,10 @@ export
     setCalibration,
     setAveraging,
     setFrequencies,
-    setSweepPoints
+    setSweepPoints,
     setIFBandwidth,
+    setMeasurement,
+    setFormat2Log,
     setFastSweep,
     setupFromFile,
 
@@ -51,17 +52,17 @@ export
 ### Private functions ###
 # They are not beeing exported
 
-function send(socket::Sockets.TCPSockets ,msg::String)
+function send(socket::Sockets.TCPSocket ,msg::String)
     Sockets.write(socket, codeunits(msg))
 end
 
-function recv(socket::Sockets.TCPSockets)
+function recv(socket::Sockets.TCPSocket)
     Sockets.refreshBuffer(socket)
 
     return readavailable(socket)
 end
 
-function recv(socket::Sockets.TCPSockets,nb::Integer)
+function recv(socket::Sockets.TCPSocket,nb::Integer)
     Sockets.refreshBuffer(socket)
 
     return read(socket,nb)
@@ -91,7 +92,7 @@ end
 
 ### Connection ###
 
-function connect(; host=ip"134.61.12.182",port=5025)
+function connect(; host=Sockets.ip"134.61.12.182",port=5025)
     try
         socket = Sockets.connect(host,port)
 
@@ -106,19 +107,19 @@ function connect(; host=ip"134.61.12.182",port=5025)
     end
 end
 
-function disconnect(socket::Sockets.TCPSockets)
+function disconnect(socket::Sockets.TCPSocket)
     Sockets.close(socket)
 
     return
 end
 
-function identify(socket::Sockets.TCPSockets)
+function identify(socket::Sockets.TCPSocket)
     send(socket,"*IDN?\n")
 
     return
 end
 
-function clearStatus(socket::Sockets.TCPSockets)
+function clearStatus(socket::Sockets.TCPSocket)
     send(socket,"*CLS\n")
 
     return
@@ -127,7 +128,7 @@ end
 
 ### Setup ###
 
-function setPowerLevel(socket::Sockets.TCPSockets,power::Integer)
+function setPowerLevel(socket::Sockets.TCPSocket,power::Integer)
     if power > 14
         error("Power threshold reached. Must be less than 14 dBm.")
     end
@@ -137,13 +138,13 @@ function setPowerLevel(socket::Sockets.TCPSockets,power::Integer)
     return
 end
 
-function setCalibration(socket::Sockets.TCPSockets,calName::String)
+function setCalibration(socket::Sockets.TCPSocket,calName::String)
     send(socket, "SENSe:CORRection:CSET:ACTivate \""*string(calName)*"\",1\n")
 
     return
 end
 
-function setAveraging(socket::Sockets.TCPSockets,state::Bool; counts::Int=50)
+function setAveraging(socket::Sockets.TCPSocket,state::Bool; counts::Int=50)
     if counts <= 0
         error("Count number must be positive.")
     end
@@ -157,7 +158,7 @@ function setAveraging(socket::Sockets.TCPSockets,state::Bool; counts::Int=50)
     return
 end
 
-function setFrequencies(socket::Sockets.TCPSockets,center::Float64,span::Float64)
+function setFrequencies(socket::Sockets.TCPSocket,center::Float64,span::Float64)
     if !(10e6 <= center <= 43.5e9)
         error("Center frequency must be between 10 MHz and 43.5 GHz.")
     elseif !(0 <= span <= min(abs(center-10e6),abs(center-43.5)))
@@ -169,7 +170,7 @@ function setFrequencies(socket::Sockets.TCPSockets,center::Float64,span::Float64
     return
 end
 
-function setSweepPoints(socket::Sockets.TCPSockets, points::Integer)
+function setSweepPoints(socket::Sockets.TCPSocket, points::Integer)
     if points <= 0
         error("Must use at least one sweep point.")
     end
@@ -179,7 +180,7 @@ function setSweepPoints(socket::Sockets.TCPSockets, points::Integer)
     return
 end
 
-function setIFBandwidth(socket::Sockets.TCPSockets, bandwidth::Integer)
+function setIFBandwidth(socket::Sockets.TCPSocket, bandwidth::Integer)
     if bandwidth <= 0
         error("Resolution must be greater that 0.")
     end
@@ -189,19 +190,19 @@ function setIFBandwidth(socket::Sockets.TCPSockets, bandwidth::Integer)
     return
 end
 
-function setMeasurement(socket::Sockets.TCPSockets, name::String)
+function setMeasurement(socket::Sockets.TCPSocket, name::String)
     send(socket, "CALCulate:PARameter:SELect '"*name*"'\n")
 
     return
 end
 
-function setFormat2Log(socket::Sockets.TCPSockets)
+function setFormat2Log(socket::Sockets.TCPSocket)
     send(socket, "CALCulate:MEASure:FORMat MLOGarithmic\n")
 
     return
 end
 
-function setFastSweep(socket::Sockets.TCPSockets, fast::Bool)
+function setFastSweep(socket::Sockets.TCPSocket, fast::Bool)
     if fast
         send(socket,"SENSe:SWEep:SPEed FAST\n")
     else
@@ -211,7 +212,7 @@ function setFastSweep(socket::Sockets.TCPSockets, fast::Bool)
     return
 end
 
-function setupFromFile(socket::Sockets.TCPSockets,file::String)
+function setupFromFile(socket::Sockets.TCPSocket,file::String)
     for line in readlines(file)
         if line[1] == '#'
             continue
@@ -263,24 +264,24 @@ end
 
 ### Buffer ###
 
-function getBufferSize(socket::Sockets.TCPSockets)
+function getBufferSize(socket::Sockets.TCPSocket)
     return socket.buffer.size
 end
 
-function refreshBuffer(socket::Sockets.TCPSockets)
+function refreshBuffer(socket::Sockets.TCPSocket)
     @async eof(socket)
 
     return
 end
 
-function clearBuffer(socket::Sockets.TCPSockets)
+function clearBuffer(socket::Sockets.TCPSocket)
     vna.buffer.size = 0
     vna.buffer.ptr = 1
 
     return
 end
 
-function isBlocked(socket::Sockets.TCPSockets)
+function isBlocked(socket::Sockets.TCPSocket)
     refreshBuffer(socket)
 
     return getBufferSize(socket) == 0
@@ -289,19 +290,19 @@ end
 
 ### Trigger ###
 
-function triggerContinuous(socket::Sockets.TCPSockets)
+function triggerContinuous(socket::Sockets.TCPSocket)
     send(socket, "SENse:SWEep:MODE HOLD\n")
 
     return
 end
 
-function triggerHold(socket::Sockets.TCPSockets)
+function triggerHold(socket::Sockets.TCPSocket)
     send(socket, "SENse:SWEep:MODE CONTinuous\n")
 
     return
 end
 
-function triggerSingle(socket::Sockets.TCPSockets)
+function triggerSingle(socket::Sockets.TCPSocket)
     send(socket, "SENse:SWEep:MODE SINGle\n")
 
     return
@@ -310,13 +311,13 @@ end
 
 ### Data ###
 
-function saveS2P(socket::Sockets.TCPSockets, fileURL::String)
+function saveS2P(socket::Sockets.TCPSocket, fileURL::String)
     send(socket, "MMEMory:STORe "*string(fileURL)*"\n")
 
     return
 end
 
-function getFrequencies(socket::Sockets.TCPSockets; waittime=0)
+function getFrequencies(socket::Sockets.TCPSocket; waittime=0)
     try
         clearBuffer(vna)
 
@@ -358,7 +359,7 @@ function getFrequencies(socket::Sockets.TCPSockets; waittime=0)
     end
 end
 
-function getSweepTime(socket::Sockets.TCPSockets)
+function getSweepTime(socket::Sockets.TCPSocket)
     clearBuffer(socket)
     send(socket, "SENSe:SWEep:TIME?\n")
     bytes = recv(socket)
@@ -372,7 +373,7 @@ function complexFromTrace(data::Vector{Float64})
     @views d += data[2:2:end]*im
 end
 
-function getTrace(socket::Sockets.TCPSockets; waittime=0,set=false)
+function getTrace(socket::Sockets.TCPSocket; waittime=0,set=false)
     clearBuffer(vna)
 
     if set
@@ -409,14 +410,14 @@ function getTrace(socket::Sockets.TCPSockets; waittime=0,set=false)
     return complexFromTrace(Vector(data))
 end
 
-function storeTraceInMemory(socket::Sockets.TCPSockets, mnum::Integer)
+function storeTraceInMemory(socket::Sockets.TCPSocket, mnum::Integer)
     send(socket, "CALCulate1:PARameter:DEFine:EXTended 'data_"*string(mnum)*"','S11'\n")
     send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
     send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
     send(socket, "CALCulate1:MATH:MEMorize;*OPC?\n")
 end
 
-function getTraceFromMemory(socket::Sockets.TCPSockets, mnum::Integer; delete=true)
+function getTraceFromMemory(socket::Sockets.TCPSocket, mnum::Integer; delete=true)
     clearBuffer(vna)
 
     send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
@@ -451,17 +452,17 @@ function getTraceFromMemory(socket::Sockets.TCPSockets, mnum::Integer; delete=tr
     return complexFromTrace(Vector(data))
 end
 
-function getTraceCatalog(socket::Sockets.TCPSockets)
+function getTraceCatalog(socket::Sockets.TCPSocket)
     send(socket,"CALCulate:PARameter:CATalog?\n")
     data = recv(vna)
     return String(data)
 end
 
-function deleteTrace(socket::Sockets.TCPSockets, mnum::Integer)
+function deleteTrace(socket::Sockets.TCPSocket, mnum::Integer)
     send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n")
 end
 
-function deleteAllTraces(socket::Sockets.TCPSockets)
+function deleteAllTraces(socket::Sockets.TCPSocket)
     send(socket,"CALCulate:PARameter:CATalog?\n")
     data = recv(vna)
     catalog = split(String(data), ',')
@@ -478,7 +479,7 @@ function deleteAllTraces(socket::Sockets.TCPSockets)
     return
 end
 
-function getTrace(socket::Sockets.TCPSockets,n::Int64; waittime=0,set=false,nfreqs=128)
+function getTrace(socket::Sockets.TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
     ref = zeros(ComplexF64,nfreqs)
 
     if n == 1
@@ -520,7 +521,7 @@ function getTrace(socket::Sockets.TCPSockets,n::Int64; waittime=0,set=false,nfre
 end
 
 
-function getTraceM(socket::Sockets.TCPSockets; waittime=0,set=false)
+function getTraceM(socket::Sockets.TCPSocket; waittime=0,set=false)
     clearBuffer(vna)
 
     if set
@@ -547,7 +548,7 @@ function getTraceM(socket::Sockets.TCPSockets; waittime=0,set=false)
     return complexFromTrace(Vector(data))
 end
 
-function getTraceM(socket::Sockets.TCPSockets,n::Int64; waittime=0,set=false,nfreqs=128)
+function getTraceM(socket::Sockets.TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
     ref = zeros(ComplexF64,div(nfreqs,2))
 
     if n == 1
@@ -588,8 +589,8 @@ function getTraceM(socket::Sockets.TCPSockets,n::Int64; waittime=0,set=false,nfr
     end
 end
 
-# function getTraceG(socket::Sockets.TCPSockets,n::Int64; waittime=0,set::Bool=false)
-function getTraceG(socket::Sockets.TCPSockets; waittime=0)
+# function getTraceG(socket::Sockets.TCPSocket,n::Int64; waittime=0,set::Bool=false)
+function getTraceG(socket::Sockets.TCPSocket; waittime=0)
     clearBuffer(vna)
     
     send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
@@ -618,7 +619,7 @@ end
 
 # combined functions for convenience
 
-function instrumentErrCheck(socket::Sockets.TCPSockets)
+function instrumentErrCheck(socket::Sockets.TCPSocket)
     try
         erroutclear = false
         noerrresult = codeunits("NO ERROR")
@@ -647,7 +648,7 @@ function instrumentErrCheck(socket::Sockets.TCPSockets)
     end
 end
 
-function instrumentSimplifiedSetup(socket::Sockets.TCPSockets;
+function instrumentSimplifiedSetup(socket::Sockets.TCPSocket;
         calName::String = cals[:c3GHz],
         power::Int = -20,
         center::Float64 = 20.025e9,
