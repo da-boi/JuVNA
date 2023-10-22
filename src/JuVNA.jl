@@ -5,21 +5,65 @@
 # host (vna) 134.61.12.182
 # port at host 5025
 
-using Sockets
-import Sockets.send, Sockets.TCPSocket
+module VNA
+
+import Sockets
 
 
-function send(socket::TCPSocket,msg::String)
-    write(socket,codeunits(msg))
+export
+    connect,
+    disconnect,
+    identify,
+    clearStatus,
+
+    setPowerLevel,
+    setCalibration,
+    setAveraging,
+    setFrequencies,
+    setSweepPoints
+    setIFBandwidth,
+    setFastSweep,
+    setupFromFile,
+
+    getBufferSize,
+    refreshBuffer,
+    clearBuffer,
+    isBlocked,
+
+    triggerContinuous,
+    triggerHold,
+    triggerSingle,
+
+    saveS2P,
+    getFrequencies,
+    getSweepTime,
+    getTrace,
+    storeTraceInMemory,
+    getTraceFromMemory,
+    getTraceCatalog,
+    deleteTrace,
+    deleteAllTraces,
+
+    VNAParameters
+
+
+
+### Private functions ###
+# They are not beeing exported
+
+function send(socket::Sockets.TCPSockets ,msg::String)
+    Sockets.write(socket, codeunits(msg))
 end
 
-function recv(socket::TCPSocket)
-    refreshBuffer(socket)
+function recv(socket::Sockets.TCPSockets)
+    Sockets.refreshBuffer(socket)
+
     return readavailable(socket)
 end
 
-function recv(socket::TCPSocket,nb::Integer)
-    refreshBuffer(socket)
+function recv(socket::Sockets.TCPSockets,nb::Integer)
+    Sockets.refreshBuffer(socket)
+
     return read(socket,nb)
 end
 
@@ -44,45 +88,17 @@ function async_reader(io::IO, timeout_sec)::Channel
     return ch
 end
 
-# ch_out = async_reader(io, timeout)
-# out = take!(ch_out)  # if out===:timeout, a timeout occurred
 
-function getBufferSize(socket::TCPSocket)
-    return socket.buffer.size
-    # return getfield(socket,:buffer).size
-end
+### Connection ###
 
-function refreshBuffer(socket::TCPSocket)
-    @async eof(socket)
-
-    return
-end
-
-function clearBuffer(socket::TCPSocket)
-    vna.buffer.size = 0
-    vna.buffer.ptr = 1
-
-    return
-end
-
-function isBlocked(socket::TCPSocket)
-    refreshBuffer(socket)
-
-    return getBufferSize(socket) == 0
-end
-
-
-
-
-
-
-function connectVNA(; host=ip"134.61.12.182",port=5025)
+function connect(; host=ip"134.61.12.182",port=5025)
     try
-        socket = connect(host,port)
+        socket = Sockets.connect(host,port)
 
-        refreshBuffer(socket)
+        Sockets.refreshBuffer(socket)
 
         return socket
+
     catch e
         error("Failed to connect to host.\n"*e.msg)
 
@@ -90,127 +106,112 @@ function connectVNA(; host=ip"134.61.12.182",port=5025)
     end
 end
 
-function disconnectVNA(socket::TCPSocket)
-    close(socket)
-end
-
-function identifyVNA(socket::TCPSocket)
-    send(socket,"*IDN?\n")
-end
-
-function clearStatus(socket::TCPSocket)
-    send(socket,"*CLS\n")
-end
-
-
-
-
-
-function setPowerLevel(socket::TCPSocket,power::Integer)
-    if power > 14
-        error("Power threshold reached. Must be less than 14 dBm.")
-    end
-
-    write(socket,
-        codeunits(
-            "SOURce:POWer:LEVel:IMMediate:AMPLitude "*string(power)*"\n"
-        )
-    )
-end
-
-function setCalibration(socket::TCPSocket,calName::String)
-    write(socket,
-        codeunits(
-            "SENSe:CORRection:CSET:ACTivate \""*string(calName)*"\",1\n"
-        )
-    )
+function disconnect(socket::Sockets.TCPSockets)
+    Sockets.close(socket)
 
     return
 end
 
-function setAveraging(socket::TCPSocket,state::Bool; counts::Int=50)
+function identify(socket::Sockets.TCPSockets)
+    send(socket,"*IDN?\n")
+
+    return
+end
+
+function clearStatus(socket::Sockets.TCPSockets)
+    send(socket,"*CLS\n")
+
+    return
+end
+
+
+### Setup ###
+
+function setPowerLevel(socket::Sockets.TCPSockets,power::Integer)
+    if power > 14
+        error("Power threshold reached. Must be less than 14 dBm.")
+    end
+
+    send(socket, "SOURce:POWer:LEVel:IMMediate:AMPLitude "*string(power)*"\n")
+
+    return
+end
+
+function setCalibration(socket::Sockets.TCPSockets,calName::String)
+    send(socket, "SENSe:CORRection:CSET:ACTivate \""*string(calName)*"\",1\n")
+
+    return
+end
+
+function setAveraging(socket::Sockets.TCPSockets,state::Bool; counts::Int=50)
     if counts <= 0
         error("Count number must be positive.")
     end
 
-    write(socket,
-        codeunits(
-            "SENSe:AVERage:STATe "*(state ? "ON\n" : "OFF\n")
-        )
-    )
+    send(socket, "SENSe:AVERage:STATe "*(state ? "ON\n" : "OFF\n"))
 
-    if !state
-        return
-    end 
+    if state
+        send(socket, "SENSe:AVERage:COUNt "*string(counts)*"\n")
+    end
 
-    write(socket,
-        codeunits(
-            "SENSe:AVERage:COUNt "*string(counts)*"\n"
-        )
-    )
+    return
 end
 
-function setFrequencies(socket::TCPSocket,center::Float64,span::Float64)
+function setFrequencies(socket::Sockets.TCPSockets,center::Float64,span::Float64)
     if !(10e6 <= center <= 43.5e9)
         error("Center frequency must be between 10 MHz and 43.5 GHz.")
     elseif !(0 <= span <= min(abs(center-10e6),abs(center-43.5)))
         error("Span reaches out of 10 MHz to 43.5 GHz bandwidth.")
     end
 
-    write(socket,
-        codeunits(
-            "SENS:FREQ:CENTer "*string(center)*";SPAN "*string(span)*"\n"
-        )
-    )
+    send(socket, "SENS:FREQ:CENTer "*string(center)*";SPAN "*string(span)*"\n")
 
     return
 end
 
-function setSweepPoints(socket::TCPSocket, points::Integer)
+function setSweepPoints(socket::Sockets.TCPSockets, points::Integer)
     if points <= 0
         error("Must use at least one sweep point.")
     end
 
-    write(socket,
-        codeunits(
-            "SENSe1:SWEep:POINts "*string(points)*"\n"
-        )
-    )
+    send(socket, "SENSe1:SWEep:POINts "*string(points)*"\n")
+
+    return
 end
 
-function setIFBandwidth(socket::TCPSocket, bandwidth::Integer)
+function setIFBandwidth(socket::Sockets.TCPSockets, bandwidth::Integer)
     if bandwidth <= 0
         error("Resolution must be greater that 0.")
     end
 
-    write(socket,
-        codeunits(
-            "SENSe1:BANDwidth:RESolution "*string(bandwidth)*"\n"
-        )
-    )
+    send(socket, "SENSe1:BANDwidth:RESolution "*string(bandwidth)*"\n")
 
     return
 end
 
-function setMeasurement(socket::TCPSocket, name::String)
-    write(socket,
-        codeunits(
-            "CALCulate:PARameter:SELect '"*name*"'\n"
-        )
-    )
-end
-
-function setFormat2Log(socket::TCPSocket)
-    write(socket,
-        codeunits(
-            "CALCulate:MEASure:FORMat MLOGarithmic\n"
-        )
-    )
+function setMeasurement(socket::Sockets.TCPSockets, name::String)
+    send(socket, "CALCulate:PARameter:SELect '"*name*"'\n")
 
     return
 end
 
-function setupFromFile(socket::TCPSocket,file::String)
+function setFormat2Log(socket::Sockets.TCPSockets)
+    send(socket, "CALCulate:MEASure:FORMat MLOGarithmic\n")
+
+    return
+end
+
+function setFastSweep(socket::Sockets.TCPSockets, fast::Bool)
+    if fast
+        send(socket,"SENSe:SWEep:SPEed FAST\n")
+    else
+        send(socket,"SENSe:SWEep:SPEed NORMal\n")
+    end
+
+    return
+end
+
+function setupFromFile(socket::Sockets.TCPSockets,file::String)
     for line in readlines(file)
         if line[1] == '#'
             continue
@@ -260,414 +261,62 @@ function setupFromFile(socket::TCPSocket,file::String)
 end
 
 
+### Buffer ###
 
+function getBufferSize(socket::Sockets.TCPSockets)
+    return socket.buffer.size
+end
 
-function triggerContinuous(socket::TCPSocket)
-    write(socket,
-        codeunits(
-            "sense:sweep:mode hold\n"
-        )
-    )
+function refreshBuffer(socket::Sockets.TCPSockets)
+    @async eof(socket)
 
     return
 end
 
-function triggerHold(socket::TCPSocket)
-    write(socket,
-        codeunits(
-            "sense:sweep:mode continuous\n"
-        )
-    )
-end
-
-function triggerSingleWithHold(socket::TCPSocket)
-    write(socket,
-        codeunits(
-            "SENse:SWEep:MODE SINGle;*OPC?\n"
-        )
-    )
-
-    recv(socket,8)
-
-    write(socket,
-        codeunits(
-            "DISPlay:WINDow1:TRACe1:Y:SCALe:AUTO;*OPC?\n"
-        )
-    )
-
-    return recv(socket,8)
-end
-
-function triggerFreeRun(socket::TCPSocket)
-    write(socket,
-        codeunits(
-            "SENse:SWEep:MODE CONT;*OPC?\n"
-        )
-    )
-
-    return recv(socket,8)
-end
-
-function saveS2P(socket::TCPSocket,fileURL::String)
-    write(socket,
-        codeunits(
-            "MMEMory:STORe "*string(fileURL)*"\n"
-        )
-    )
-end
-
-function getSweepTime(socket::TCPSocket)
-    clearBuffer(socket)
-    send(socket, "SENSe:SWEep:TIME?\n")
-    bytes = recv(socket)
-    return Float64(bytes)
-end
-
-function getSweepStartTime(socket::TCPSocket)
-    clearBuffer(socket)
-    send(socket, "SENSe:SWEep:TIME?\n")
-    bytes = recv(socket)
-    return Float64(bytes)
-end
-
-import Core: Int, Float64
-
-Core.Int(data::Array{UInt8}) = parse(Int, String(data))
-Core.Float64(data::Array{UInt8}) = parse(Float64, String(data))
-
-
-function getDataAsBinBlockTransfer(socket::TCPSocket; waittime=0)
-    try
-        clearBuffer(vna)
-
-        send(socket,"CALCulate1:PARameter:SELect 'CH1_S11_2'\n")
-        send(socket,"CALCulate1:FORMat IMAGinary\n")
-        send(socket,"CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-        send(socket,"CALCulate1:FORMat REAL\n")
-
-        send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket,"FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket,"SENSe:SWEep:SPEed FAST\n")  # Set the sweep speed to fast
-        send(socket,"SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
-        
-        ### Read the real part of S11 ###
-        send(socket,"CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-        send(socket,"CALCulate1:DATA? FDATA\n") # Read the S11 parameter Data
-        # Returns
-        # 1 Byte: Block Data Delimiter '#'
-        # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
-        # n Bytes: N := number of data bytes to read in ASCII
-        # N Bytes: data
-        # 1 Byte: End of line character 0x0A to indicate the end of the data block
-
-        # Wait for the Block Data Delimiter '#'
-        while recv(socket,1)[begin] != 0x23 end
-
-        numofdigitstoread = Int(recv(socket,1))
-
-        numofbytes = Int(recv(socket, numofdigitstoread))
-
-        bytes = recv(socket, numofbytes)
-
-        real = reinterpret(Float64, bytes)
-
-        hanginglinefeed = recv(socket,1)
-        if hanginglinefeed[begin] != 0x0A
-            error("End of Line Character expected to indicate end of data block")
-        end
-
-        ### Read the imaginary part of S11 ###
-        send(socket,"CALCulate1:PARameter:SELect 'CH1_S11_2'\n")
-        send(socket,"CALCulate1:DATA? FDATA\n")
-
-        # Wait for the Block Data Delimiter '#'
-        while recv(socket,1)[begin] != 0x23 end
-
-        numofdigitstoread = Int(recv(socket,1))
-
-        numofbytes = Int(recv(socket, numofdigitstoread))
-
-        bytes = recv(socket, numofbytes)
-
-        imag = reinterpret(Float64, bytes)
-
-        hanginglinefeed = recv(socket,1)
-        if hanginglinefeed[begin] != 0x0A
-            error("End of Line Character expected to indicate end of data block")
-        end
-
-
-        sleep(waittime)
-
-        send(socket,"FORMat:DATA ASCii,0;*OPC?\n") # Set the return type back to ASCII
-
-        return real .+ imag.*im
-    catch e
-        println(e)
-        error("Oepsie woepsie, something wrong uwu.")
-    end
-end
-
-function getCatalog(socket::TCPSocket)
-    send(socket,"CALCulate:PARameter:CATalog?\n")
-    data = recv(vna)
-    return String(data)
-end
-
-function deleteTrace(socket::TCPSocket, mnum::Integer)
-    send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n")
-end
-
-function deleteAllTraces(socket::TCPSocket)
-    send(socket,"CALCulate:PARameter:CATalog?\n")
-    data = recv(vna)
-    catalog = split(String(data), ',')
-    
-    pattern = r"data_\d+"
-    
-    for s in catalog
-        m = match(pattern, s)
-        if m !== nothing
-            send(socket,"CALCulate:PARameter:DELete '"*m.match*"'\n")
-        end
-    end
+function clearBuffer(socket::Sockets.TCPSockets)
+    vna.buffer.size = 0
+    vna.buffer.ptr = 1
 
     return
 end
 
-function setFastSweep(socket::TCPSocket, fast::Bool)
-    if fast
-        send(socket,"SENSe:SWEep:SPEed FAST\n")
-    else
-        send(socket,"SENSe:SWEep:SPEed NORMal\n")
-    end
-end
+function isBlocked(socket::Sockets.TCPSockets)
+    refreshBuffer(socket)
 
-function storeTraceInMemory(socket::TCPSocket, mnum::Integer)
-    send(socket, "CALCulate1:PARameter:DEFine:EXTended 'data_"*string(mnum)*"','S11'\n")
-    send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
-    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
-    send(socket, "CALCulate1:MATH:MEMorize;*OPC?\n")
-end
-
-function complexFromTrace(data::Vector{Float64}) 
-    d = zeros(ComplexF64,div(length(data),2))
-
-    @views d += data[1:2:end]
-    @views d += data[2:2:end]*im
-end
-
-function getTraceFromMemory(socket::TCPSocket, mnum::Integer; delete=true)
-    clearBuffer(vna)
-
-    send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-    send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-    send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
-    send(socket, "CALCulate1:DATA? SMEM\n") # Read the S11 parameter Data
-    # Returns
-    # 1 Byte: Block Data Delimiter '#'
-    # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
-    # n Bytes: N := number of data bytes to read in ASCII
-    # N Bytes: data
-    # 1 Byte: End of line character 0x0A to indicate the end of the data block
-
-    # Wait for the Block Data Delimiter '#'
-    while recv(socket,1)[begin] != 0x23 end
-
-    numofdigitstoread = Int(recv(socket,1))
-
-    numofbytes = Int(recv(socket, numofdigitstoread))
-
-    bytes = recv(socket, numofbytes)
-
-    data = reinterpret(Float64, bytes)
-
-    hanginglinefeed = recv(socket,1)
-    if hanginglinefeed[begin] != 0x0A
-        error("End of Line Character expected to indicate end of data block")
-    end
-
-    if delete send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n") end
-
-    return complexFromTrace(Vector(data))
-end
-
-function getTrace(socket::TCPSocket; waittime=0,set=false)
-    clearBuffer(vna)
-
-    if set
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
-    
-    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
-    send(socket, "CALCulate1:DATA? SDATA\n") # Read the S11 parameter Data
-    # Returns
-    # 1 Byte: Block Data Delimiter '#'
-    # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
-    # n Bytes: N := number of data bytes to read in ASCII
-    # N Bytes: data
-    # 1 Byte: End of line character 0x0A to indicate the end of the data block
-
-    # Wait for the Block Data Delimiter '#'
-    while recv(socket,1)[begin] != 0x23 end
-
-    numofdigitstoread = Int(recv(socket,1))
-
-    numofbytes = Int(recv(socket, numofdigitstoread))
-
-    bytes = recv(socket, numofbytes)
-
-    data = reinterpret(Float64, bytes)
-
-    hanginglinefeed = recv(socket,1)
-    if hanginglinefeed[begin] != 0x0A
-        error("End of Line Character expected to indicate end of data block")
-    end
-
-    return complexFromTrace(Vector(data))
-end
-
-function getTrace(socket::TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
-    ref = zeros(ComplexF64,nfreqs)
-
-    if n == 1
-        return getTrace(socket; waittime=waittime,set=set)
-    end
-    
-    if set
-        clearBuffer(vna)
-
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
-
-    for i in 1:n
-        clearBuffer(vna)
-
-        send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
-        send(socket, "CALC:DATA? SDATA\n") 
-
-        while recv(socket,1)[begin] != 0x23 end
-
-        numofdigitstoread = Int(recv(socket,1))
-        numofbytes = Int(recv(socket, numofdigitstoread))
-        bytes = recv(socket, numofbytes)
-        data = reinterpret(Float64, bytes)
-        hanginglinefeed = recv(socket,1)
-        
-        if hanginglinefeed[begin] != 0x0A
-            error("End of Line Character expected to indicate end of data block")
-        end
-
-        if i == n
-            return ref/n
-        else
-            ref += complexFromTrace(Vector(data))
-        end
-    end
+    return getBufferSize(socket) == 0
 end
 
 
-function getTraceM(socket::TCPSocket; waittime=0,set=false)
-    clearBuffer(vna)
+### Trigger ###
 
-    if set
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
+function triggerContinuous(socket::Sockets.TCPSockets)
+    send(socket, "SENse:SWEep:MODE HOLD\n")
 
-    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
-    send(socket, "CALC:DATA? FDATA\n") 
-
-    while recv(socket,1)[begin] != 0x23 end
-
-    numofdigitstoread = Int(recv(socket,1))
-    numofbytes = Int(recv(socket, numofdigitstoread))
-    bytes = recv(socket, numofbytes)
-    data = reinterpret(Float64, bytes)
-    hanginglinefeed = recv(socket,1)
-
-    if hanginglinefeed[begin] != 0x0A
-        error("End of Line Character expected to indicate end of data block")
-    end
-
-    return complexFromTrace(Vector(data))
+    return
 end
 
-function getTraceM(socket::TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
-    ref = zeros(ComplexF64,div(nfreqs,2))
+function triggerHold(socket::Sockets.TCPSockets)
+    send(socket, "SENse:SWEep:MODE CONTinuous\n")
 
-    if n == 1
-        return getTraceM(socket; waittime=waittime,set=set)
-    end
-    
-    if set
-        clearBuffer(vna)
-
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
-
-    for i in 1:n
-        clearBuffer(vna)
-
-        send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
-        send(socket, "CALC:DATA? FDATA\n") 
-
-        while recv(socket,1)[begin] != 0x23 end
-
-        numofdigitstoread = Int(recv(socket,1))
-        numofbytes = Int(recv(socket, numofdigitstoread))
-        bytes = recv(socket, numofbytes)
-        data = reinterpret(Float64, bytes)
-        hanginglinefeed = recv(socket,1)
-        
-        if hanginglinefeed[begin] != 0x0A
-            error("End of Line Character expected to indicate end of data block")
-        end
-
-        if i == n
-            return ref/n
-        else
-            ref += complexFromTrace(Vector(data))
-        end
-    end
+    return
 end
 
-# function getTraceG(socket::TCPSocket,n::Int64; waittime=0,set::Bool=false)
-function getTraceG(socket::TCPSocket; waittime=0)
-    clearBuffer(vna)
-    
-    send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    send(socket, "SENSe:SWEep:MODE GROups;*OPC?\n")
-    send(socket, "CALCulate1:DATA? SDATA\n")
+function triggerSingle(socket::Sockets.TCPSockets)
+    send(socket, "SENse:SWEep:MODE SINGle\n")
 
-    sleep(waittime)
-    
-    while recv(socket,1)[begin] != 0x23 end
-
-    numofdigitstoread = Int(recv(socket,1))
-
-    numofbytes = Int(recv(socket, numofdigitstoread))
-
-    bytes = recv(socket, numofbytes)
-
-    data = reinterpret(Float64, bytes)
-
-    hanginglinefeed = recv(socket,1)
-    if hanginglinefeed[begin] != 0x0A
-        error("End of Line Character expected to indicate end of data block")
-    end
-
-    return complexFromTrace(Vector(data))
+    return
 end
 
-function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
+
+### Data ###
+
+function saveS2P(socket::Sockets.TCPSockets, fileURL::String)
+    send(socket, "MMEMory:STORe "*string(fileURL)*"\n")
+
+    return
+end
+
+function getFrequencies(socket::Sockets.TCPSockets; waittime=0)
     try
         clearBuffer(vna)
 
@@ -709,11 +358,267 @@ function getFreqAsBinBlockTransfer(socket::TCPSocket; waittime=0)
     end
 end
 
-getFrequencies(socket::TCPSocket) = getFreqAsBinBlockTransfer(socket)
+function getSweepTime(socket::Sockets.TCPSockets)
+    clearBuffer(socket)
+    send(socket, "SENSe:SWEep:TIME?\n")
+    bytes = recv(socket)
+    return Float64(bytes)
+end
+
+function complexFromTrace(data::Vector{Float64}) 
+    d = zeros(ComplexF64,div(length(data),2))
+
+    @views d += data[1:2:end]
+    @views d += data[2:2:end]*im
+end
+
+function getTrace(socket::Sockets.TCPSockets; waittime=0,set=false)
+    clearBuffer(vna)
+
+    if set
+        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+    end
+    
+    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+    send(socket, "CALCulate1:DATA? SDATA\n") # Read the S11 parameter Data
+    # Returns
+    # 1 Byte: Block Data Delimiter '#'
+    # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
+    # n Bytes: N := number of data bytes to read in ASCII
+    # N Bytes: data
+    # 1 Byte: End of line character 0x0A to indicate the end of the data block
+
+    # Wait for the Block Data Delimiter '#'
+    while recv(socket,1)[begin] != 0x23 end
+
+    numofdigitstoread = Int(recv(socket,1))
+
+    numofbytes = Int(recv(socket, numofdigitstoread))
+
+    bytes = recv(socket, numofbytes)
+
+    data = reinterpret(Float64, bytes)
+
+    hanginglinefeed = recv(socket,1)
+    if hanginglinefeed[begin] != 0x0A
+        error("End of Line Character expected to indicate end of data block")
+    end
+
+    return complexFromTrace(Vector(data))
+end
+
+function storeTraceInMemory(socket::Sockets.TCPSockets, mnum::Integer)
+    send(socket, "CALCulate1:PARameter:DEFine:EXTended 'data_"*string(mnum)*"','S11'\n")
+    send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
+    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")  # Set the trigger to Single and wait for completion
+    send(socket, "CALCulate1:MATH:MEMorize;*OPC?\n")
+end
+
+function getTraceFromMemory(socket::Sockets.TCPSockets, mnum::Integer; delete=true)
+    clearBuffer(vna)
+
+    send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+    send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+    send(socket, "CALCulate1:PARameter:SELect 'data_"*string(mnum)*"'\n")
+    send(socket, "CALCulate1:DATA? SMEM\n") # Read the S11 parameter Data
+    # Returns
+    # 1 Byte: Block Data Delimiter '#'
+    # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
+    # n Bytes: N := number of data bytes to read in ASCII
+    # N Bytes: data
+    # 1 Byte: End of line character 0x0A to indicate the end of the data block
+
+    # Wait for the Block Data Delimiter '#'
+    while recv(socket,1)[begin] != 0x23 end
+
+    numofdigitstoread = Int(recv(socket,1))
+
+    numofbytes = Int(recv(socket, numofdigitstoread))
+
+    bytes = recv(socket, numofbytes)
+
+    data = reinterpret(Float64, bytes)
+
+    hanginglinefeed = recv(socket,1)
+    if hanginglinefeed[begin] != 0x0A
+        error("End of Line Character expected to indicate end of data block")
+    end
+
+    if delete send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n") end
+
+    return complexFromTrace(Vector(data))
+end
+
+function getTraceCatalog(socket::Sockets.TCPSockets)
+    send(socket,"CALCulate:PARameter:CATalog?\n")
+    data = recv(vna)
+    return String(data)
+end
+
+function deleteTrace(socket::Sockets.TCPSockets, mnum::Integer)
+    send(socket,"CALCulate:PARameter:DELete 'data_"*string(mnum)*"'\n")
+end
+
+function deleteAllTraces(socket::Sockets.TCPSockets)
+    send(socket,"CALCulate:PARameter:CATalog?\n")
+    data = recv(vna)
+    catalog = split(String(data), ',')
+    
+    pattern = r"data_\d+"
+    
+    for s in catalog
+        m = match(pattern, s)
+        if m !== nothing
+            send(socket,"CALCulate:PARameter:DELete '"*m.match*"'\n")
+        end
+    end
+
+    return
+end
+
+function getTrace(socket::Sockets.TCPSockets,n::Int64; waittime=0,set=false,nfreqs=128)
+    ref = zeros(ComplexF64,nfreqs)
+
+    if n == 1
+        return getTrace(socket; waittime=waittime,set=set)
+    end
+    
+    if set
+        clearBuffer(vna)
+
+        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+    end
+
+    for i in 1:n
+        clearBuffer(vna)
+
+        send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+        send(socket, "CALC:DATA? SDATA\n") 
+
+        while recv(socket,1)[begin] != 0x23 end
+
+        numofdigitstoread = Int(recv(socket,1))
+        numofbytes = Int(recv(socket, numofdigitstoread))
+        bytes = recv(socket, numofbytes)
+        data = reinterpret(Float64, bytes)
+        hanginglinefeed = recv(socket,1)
+        
+        if hanginglinefeed[begin] != 0x0A
+            error("End of Line Character expected to indicate end of data block")
+        end
+
+        if i == n
+            return ref/n
+        else
+            ref += complexFromTrace(Vector(data))
+        end
+    end
+end
+
+
+function getTraceM(socket::Sockets.TCPSockets; waittime=0,set=false)
+    clearBuffer(vna)
+
+    if set
+        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+    end
+
+    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+    send(socket, "CALC:DATA? FDATA\n") 
+
+    while recv(socket,1)[begin] != 0x23 end
+
+    numofdigitstoread = Int(recv(socket,1))
+    numofbytes = Int(recv(socket, numofdigitstoread))
+    bytes = recv(socket, numofbytes)
+    data = reinterpret(Float64, bytes)
+    hanginglinefeed = recv(socket,1)
+
+    if hanginglinefeed[begin] != 0x0A
+        error("End of Line Character expected to indicate end of data block")
+    end
+
+    return complexFromTrace(Vector(data))
+end
+
+function getTraceM(socket::Sockets.TCPSockets,n::Int64; waittime=0,set=false,nfreqs=128)
+    ref = zeros(ComplexF64,div(nfreqs,2))
+
+    if n == 1
+        return getTraceM(socket; waittime=waittime,set=set)
+    end
+    
+    if set
+        clearBuffer(vna)
+
+        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+    end
+
+    for i in 1:n
+        clearBuffer(vna)
+
+        send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+        send(socket, "CALC:DATA? FDATA\n") 
+
+        while recv(socket,1)[begin] != 0x23 end
+
+        numofdigitstoread = Int(recv(socket,1))
+        numofbytes = Int(recv(socket, numofdigitstoread))
+        bytes = recv(socket, numofbytes)
+        data = reinterpret(Float64, bytes)
+        hanginglinefeed = recv(socket,1)
+        
+        if hanginglinefeed[begin] != 0x0A
+            error("End of Line Character expected to indicate end of data block")
+        end
+
+        if i == n
+            return ref/n
+        else
+            ref += complexFromTrace(Vector(data))
+        end
+    end
+end
+
+# function getTraceG(socket::Sockets.TCPSockets,n::Int64; waittime=0,set::Bool=false)
+function getTraceG(socket::Sockets.TCPSockets; waittime=0)
+    clearBuffer(vna)
+    
+    send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+    send(socket, "SENSe:SWEep:MODE GROups;*OPC?\n")
+    send(socket, "CALCulate1:DATA? SDATA\n")
+
+    sleep(waittime)
+    
+    while recv(socket,1)[begin] != 0x23 end
+
+    numofdigitstoread = Int(recv(socket,1))
+
+    numofbytes = Int(recv(socket, numofdigitstoread))
+
+    bytes = recv(socket, numofbytes)
+
+    data = reinterpret(Float64, bytes)
+
+    hanginglinefeed = recv(socket,1)
+    if hanginglinefeed[begin] != 0x0A
+        error("End of Line Character expected to indicate end of data block")
+    end
+
+    return complexFromTrace(Vector(data))
+end
 
 # combined functions for convenience
 
-function instrumentErrCheck(socket::TCPSocket)
+function instrumentErrCheck(socket::Sockets.TCPSockets)
     try
         erroutclear = false
         noerrresult = codeunits("NO ERROR")
@@ -723,11 +628,7 @@ function instrumentErrCheck(socket::TCPSocket)
         while !erroutclear
             i += 1
 
-            write(socket,
-                codeunits(
-                    "SYST:ERR?\n"
-                )
-            )
+            send(socket, "SYST:ERR?\n")
 
             errqueryresults = take!(socket)
 
@@ -746,7 +647,7 @@ function instrumentErrCheck(socket::TCPSocket)
     end
 end
 
-function instrumentSimplifiedSetup(socket::TCPSocket;
+function instrumentSimplifiedSetup(socket::Sockets.TCPSockets;
         calName::String = cals[:c3GHz],
         power::Int = -20,
         center::Float64 = 20.025e9,
@@ -795,4 +696,6 @@ struct VNAParameters
     sweepPoints::Integer
     sweepTime::Float64
     fastSweep::Bool
+end
+
 end
