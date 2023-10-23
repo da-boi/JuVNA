@@ -6,7 +6,7 @@ import .VNA
 vna = VNA.connect()
 
 # Load settings from a file
-VNA.setupFromFile(vna, "vna_20G_3G.txt")
+VNA.setupFromFile(vna, "test/vna_20G_3G.txt")
 
 # Perform a single trace
 # Returns the scattering parameter S11 for each frequency point as a

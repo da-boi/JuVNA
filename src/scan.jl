@@ -4,13 +4,12 @@ include("JuXIMC.jl")
 include("JuVNA.jl")
 
 import .VNA
-using JLD2, FileIO
+using JLD2, Sockets
 
 export scan, getCurrentPosition
 
-function getCurrentPosition()
+function getCurrentPosition(;motor="Big Chungus")
     # Connect to the motor
-    infoXIMC();
     D = requestDevices(motor)
 
     # Reading the current position of the motor
@@ -18,12 +17,12 @@ function getCurrentPosition()
     println("current motor position: $(pos)")
 
     # Disconnect from motor
-    closeDevice(D)
+    closeDevices(D)
 
     return pos
 end
 
-function scan(startPos::Integer, endPos::Integer; stepSize=100, file="", setup="vna_20G_3G.txt", motor="Big Chungus")
+function scan(startPos::Integer, endPos::Integer; stepSize=100, file="", setup="test/vna_20G_3G.txt", motor="Big Chungus")
 
     # Connect to the motor
     infoXIMC();
@@ -39,13 +38,15 @@ function scan(startPos::Integer, endPos::Integer; stepSize=100, file="", setup="
     #   pos     is a Vector{Int} (given in steps, 1 step = 12.5 um)
     #   freq    is a Vector{Int}
     freq = VNA.getFrequencies(vna)
-    S, pos = scan(vna, D, 0, 1000; stepSize=100)
-    if file != ""
-        @save "data.jld2" S, pos, freq
-    end
+    S, pos = _scan(vna, D[1], startPos, endPos; stepSize=1000)
 
     # Disconnect from motor
-    closeDevice(D)
+    closeDevices(D)
+
+    if file != ""
+        @save "data.jld2" S pos freq
+    end
+
 
     # Disconnect from VNA
     VNA.disconnect(vna)
@@ -58,7 +59,7 @@ end
 
 # Scans the given range
 # Performing a sweep at each position
-function _scan(socket::Sockets.TCPSocket, D::DeviceID, startPos::Integer, endPos::Integer; stepSize::Integer=250)
+function _scan(socket::Sockets.TCPSocket, D::DeviceId, startPos::Integer, endPos::Integer; stepSize::Integer=250)
     posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
     data = []
 

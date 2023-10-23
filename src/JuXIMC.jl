@@ -6,7 +6,7 @@
 export infoXIMC, setupDevices, 
     openDevice, openDevices, closeDevice, closeDevices, checkOrdering, 
     commandMove, commandWaitForStop, 
-    getPos, getPosition
+    getPos, getPosition, requestDevices
 
 using StringViews
 using Printf
@@ -15,11 +15,20 @@ include("cenums.jl")
 include("ctypes.jl")
 include("jtypes.jl")
 include("libximc_api.jl")
-include("utilities.jl")
-
-setBindyKey(joinpath("win64","keyfile.sqlite"))
 
 # setBindyKey(joinpath(dirname(@__DIR__),"XIMC\\ximc-2.13.6\\ximc\\win64\\keyfile.sqlite"))
+
+function setBindyKey(keyfilepath)
+    result = set_bindy_key(keyfilepath)
+
+    if result != 0
+        error("Result error: $result")
+    end
+
+    return
+end
+
+setBindyKey(joinpath("win64","keyfile.sqlite"))
 
 function getDeviceInformation(device::DeviceId)
     deviceinfo = device_information_t()
@@ -572,6 +581,12 @@ function infoXIMC()
     println("\nXIMC library version: "*StringView(buf))
 
     return buf
+end
+
+function Base.String(str::NTuple)
+    arr = collect(UInt8,str)
+
+    return String(filter(x->x!=0,arr))
 end
 
 function setupDevices(probeflags::UInt32,enumhints::Base.CodeUnits{UInt8,String})

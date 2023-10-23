@@ -1,6 +1,6 @@
 include("../src/scan.jl")
 using .Scan
 
-getCurrentPosition()
+getCurrentPosition(motor="Monica")
 
-scan(0, 1000; stepSize=100, file="data.jld2")
+scan(22000, 26000; stepSize=1000, file="data.jld2", motor="Monica")

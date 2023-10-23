@@ -57,13 +57,13 @@ function send(socket::Sockets.TCPSocket ,msg::String)
 end
 
 function recv(socket::Sockets.TCPSocket)
-    Sockets.refreshBuffer(socket)
+    refreshBuffer(socket)
 
     return readavailable(socket)
 end
 
 function recv(socket::Sockets.TCPSocket,nb::Integer)
-    Sockets.refreshBuffer(socket)
+    refreshBuffer(socket)
 
     return read(socket,nb)
 end
@@ -96,7 +96,9 @@ function connect(; host=Sockets.ip"134.61.12.182",port=5025)
     try
         socket = Sockets.connect(host,port)
 
-        Sockets.refreshBuffer(socket)
+        refreshBuffer(socket)
+
+        println("Connected Succesfully to the VNA")
 
         return socket
 
@@ -256,7 +258,7 @@ function setupFromFile(socket::Sockets.TCPSocket,file::String)
                 c = c*"}"
             end
             
-            setCalibration(vna,c)
+            setCalibration(socket,c)
         end
     end
 end
@@ -275,8 +277,8 @@ function refreshBuffer(socket::Sockets.TCPSocket)
 end
 
 function clearBuffer(socket::Sockets.TCPSocket)
-    vna.buffer.size = 0
-    vna.buffer.ptr = 1
+    socket.buffer.size = 0
+    socket.buffer.ptr = 1
 
     return
 end
@@ -319,7 +321,7 @@ end
 
 function getFrequencies(socket::Sockets.TCPSocket; waittime=0)
     try
-        clearBuffer(vna)
+        clearBuffer(socket)
 
         send(socket,"CALCulate:PARameter:SELect 'CH1_S11_1'\n") # Select the Channel and Measurement Parameter S11
         send(socket,"FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
@@ -373,15 +375,54 @@ function complexFromTrace(data::Vector{Float64})
     @views d += data[2:2:end]*im
 end
 
-function getTrace(socket::Sockets.TCPSocket; waittime=0,set=false)
-    clearBuffer(vna)
+# function getTrace(socket::Sockets.TCPSocket; waittime=0,set=false)
+#     # clearBuffer(socket)
 
-    if set
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
+#     if set
+#         send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+#         send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+#         send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+#     end
     
+#     send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+#     send(socket, "CALCulate1:DATA? SDATA\n") # Read the S11 parameter Data
+#     # Returns
+#     # 1 Byte: Block Data Delimiter '#'
+#     # 1 Byte: n := number of nigits for the Number of data bytes in ASCII (between 1 and 9)
+#     # n Bytes: N := number of data bytes to read in ASCII
+#     # N Bytes: data
+#     # 1 Byte: End of line character 0x0A to indicate the end of the data block
+
+#     # Wait for the Block Data Delimiter '#'
+#     while recv(socket,1)[begin] != 0x23 end
+
+#     numofdigitstoread = Int(recv(socket,1))
+
+#     numofbytes = Int(recv(socket, numofdigitstoread))
+
+#     bytes = recv(socket, numofbytes)
+
+#     data = reinterpret(Float64, bytes)
+
+#     hanginglinefeed = recv(socket,1)
+#     if hanginglinefeed[begin] != 0x0A
+#         error("End of Line Character expected to indicate end of data block")
+#     end
+
+#     return complexFromTrace(Vector(data))
+# end
+
+import Core: Int, Float64
+
+Core.Int(data::Array{UInt8}) = parse(Int, String(data))
+Core.Float64(data::Array{UInt8}) = parse(Float64, String(data))
+
+function getTrace(socket::Sockets.TCPSocket; waittime=0)
+    clearBuffer(socket)
+
+    send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+    send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+    send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
     send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
     send(socket, "CALCulate1:DATA? SDATA\n") # Read the S11 parameter Data
     # Returns
@@ -479,143 +520,144 @@ function deleteAllTraces(socket::Sockets.TCPSocket)
     return
 end
 
-function getTrace(socket::Sockets.TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
-    ref = zeros(ComplexF64,nfreqs)
 
-    if n == 1
-        return getTrace(socket; waittime=waittime,set=set)
-    end
+# function getTrace(socket::Sockets.TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
+#     ref = zeros(ComplexF64,nfreqs)
+
+#     if n == 1
+#         return getTrace(socket; waittime=waittime,set=set)
+#     end
     
-    if set
-        clearBuffer(vna)
+#     if set
+#         clearBuffer(vna)
 
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
+#         send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+#         send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+#         send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+#     end
 
-    for i in 1:n
-        clearBuffer(vna)
+#     for i in 1:n
+#         clearBuffer(vna)
 
-        send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
-        send(socket, "CALC:DATA? SDATA\n") 
+#         send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+#         send(socket, "CALC:DATA? SDATA\n") 
 
-        while recv(socket,1)[begin] != 0x23 end
+#         while recv(socket,1)[begin] != 0x23 end
 
-        numofdigitstoread = Int(recv(socket,1))
-        numofbytes = Int(recv(socket, numofdigitstoread))
-        bytes = recv(socket, numofbytes)
-        data = reinterpret(Float64, bytes)
-        hanginglinefeed = recv(socket,1)
+#         numofdigitstoread = Int(recv(socket,1))
+#         numofbytes = Int(recv(socket, numofdigitstoread))
+#         bytes = recv(socket, numofbytes)
+#         data = reinterpret(Float64, bytes)
+#         hanginglinefeed = recv(socket,1)
         
-        if hanginglinefeed[begin] != 0x0A
-            error("End of Line Character expected to indicate end of data block")
-        end
+#         if hanginglinefeed[begin] != 0x0A
+#             error("End of Line Character expected to indicate end of data block")
+#         end
 
-        if i == n
-            return ref/n
-        else
-            ref += complexFromTrace(Vector(data))
-        end
-    end
-end
+#         if i == n
+#             return ref/n
+#         else
+#             ref += complexFromTrace(Vector(data))
+#         end
+#     end
+# end
 
 
-function getTraceM(socket::Sockets.TCPSocket; waittime=0,set=false)
-    clearBuffer(vna)
+# function getTraceM(socket::Sockets.TCPSocket; waittime=0,set=false)
+#     clearBuffer(vna)
 
-    if set
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
+#     if set
+#         send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+#         send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+#         send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+#     end
 
-    send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
-    send(socket, "CALC:DATA? FDATA\n") 
+#     send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+#     send(socket, "CALC:DATA? FDATA\n") 
 
-    while recv(socket,1)[begin] != 0x23 end
+#     while recv(socket,1)[begin] != 0x23 end
 
-    numofdigitstoread = Int(recv(socket,1))
-    numofbytes = Int(recv(socket, numofdigitstoread))
-    bytes = recv(socket, numofbytes)
-    data = reinterpret(Float64, bytes)
-    hanginglinefeed = recv(socket,1)
+#     numofdigitstoread = Int(recv(socket,1))
+#     numofbytes = Int(recv(socket, numofdigitstoread))
+#     bytes = recv(socket, numofbytes)
+#     data = reinterpret(Float64, bytes)
+#     hanginglinefeed = recv(socket,1)
 
-    if hanginglinefeed[begin] != 0x0A
-        error("End of Line Character expected to indicate end of data block")
-    end
+#     if hanginglinefeed[begin] != 0x0A
+#         error("End of Line Character expected to indicate end of data block")
+#     end
 
-    return complexFromTrace(Vector(data))
-end
+#     return complexFromTrace(Vector(data))
+# end
 
-function getTraceM(socket::Sockets.TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
-    ref = zeros(ComplexF64,div(nfreqs,2))
+# function getTraceM(socket::Sockets.TCPSocket,n::Int64; waittime=0,set=false,nfreqs=128)
+#     ref = zeros(ComplexF64,div(nfreqs,2))
 
-    if n == 1
-        return getTraceM(socket; waittime=waittime,set=set)
-    end
+#     if n == 1
+#         return getTraceM(socket; waittime=waittime,set=set)
+#     end
     
-    if set
-        clearBuffer(vna)
+#     if set
+#         clearBuffer(vna)
 
-        send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
-        send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
-        send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    end
+#         send(socket, "FORMat:DATA REAL,64\n") # Set the return type to a 64 bit Float
+#         send(socket, "FORMat:BORDer SWAPPed;*OPC?\n") # Swap the byte order and wait for the completion of the commands
+#         send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+#     end
 
-    for i in 1:n
-        clearBuffer(vna)
+#     for i in 1:n
+#         clearBuffer(vna)
 
-        send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
-        send(socket, "CALC:DATA? FDATA\n") 
+#         send(socket, "SENSe:SWEep:MODE SINGLe;*OPC?\n")
+#         send(socket, "CALC:DATA? FDATA\n") 
 
-        while recv(socket,1)[begin] != 0x23 end
+#         while recv(socket,1)[begin] != 0x23 end
 
-        numofdigitstoread = Int(recv(socket,1))
-        numofbytes = Int(recv(socket, numofdigitstoread))
-        bytes = recv(socket, numofbytes)
-        data = reinterpret(Float64, bytes)
-        hanginglinefeed = recv(socket,1)
+#         numofdigitstoread = Int(recv(socket,1))
+#         numofbytes = Int(recv(socket, numofdigitstoread))
+#         bytes = recv(socket, numofbytes)
+#         data = reinterpret(Float64, bytes)
+#         hanginglinefeed = recv(socket,1)
         
-        if hanginglinefeed[begin] != 0x0A
-            error("End of Line Character expected to indicate end of data block")
-        end
+#         if hanginglinefeed[begin] != 0x0A
+#             error("End of Line Character expected to indicate end of data block")
+#         end
 
-        if i == n
-            return ref/n
-        else
-            ref += complexFromTrace(Vector(data))
-        end
-    end
-end
+#         if i == n
+#             return ref/n
+#         else
+#             ref += complexFromTrace(Vector(data))
+#         end
+#     end
+# end
 
-# function getTraceG(socket::Sockets.TCPSocket,n::Int64; waittime=0,set::Bool=false)
-function getTraceG(socket::Sockets.TCPSocket; waittime=0)
-    clearBuffer(vna)
+# # function getTraceG(socket::Sockets.TCPSocket,n::Int64; waittime=0,set::Bool=false)
+# function getTraceG(socket::Sockets.TCPSocket; waittime=0)
+#     clearBuffer(vna)
     
-    send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
-    send(socket, "SENSe:SWEep:MODE GROups;*OPC?\n")
-    send(socket, "CALCulate1:DATA? SDATA\n")
+#     send(socket, "CALCulate1:PARameter:SELect 'CH1_S11_1'\n")
+#     send(socket, "SENSe:SWEep:MODE GROups;*OPC?\n")
+#     send(socket, "CALCulate1:DATA? SDATA\n")
 
-    sleep(waittime)
+#     sleep(waittime)
     
-    while recv(socket,1)[begin] != 0x23 end
+#     while recv(socket,1)[begin] != 0x23 end
 
-    numofdigitstoread = Int(recv(socket,1))
+#     numofdigitstoread = Int(recv(socket,1))
 
-    numofbytes = Int(recv(socket, numofdigitstoread))
+#     numofbytes = Int(recv(socket, numofdigitstoread))
 
-    bytes = recv(socket, numofbytes)
+#     bytes = recv(socket, numofbytes)
 
-    data = reinterpret(Float64, bytes)
+#     data = reinterpret(Float64, bytes)
 
-    hanginglinefeed = recv(socket,1)
-    if hanginglinefeed[begin] != 0x0A
-        error("End of Line Character expected to indicate end of data block")
-    end
+#     hanginglinefeed = recv(socket,1)
+#     if hanginglinefeed[begin] != 0x0A
+#         error("End of Line Character expected to indicate end of data block")
+#     end
 
-    return complexFromTrace(Vector(data))
-end
+#     return complexFromTrace(Vector(data))
+# end
 
 # combined functions for convenience
 
