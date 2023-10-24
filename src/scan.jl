@@ -6,23 +6,15 @@ include("JuVNA.jl")
 import .VNA
 using JLD2, Sockets
 
-export scan, getCurrentPosition
+export scan, getCurrentPosition, setMicroStepMode
 
-function getCurrentPosition(;motor="Big Chungus")
-    # Connect to the motor
-    D = requestDevices(motor)
-
-    # Reading the current position of the motor
-    pos = getPosition(D)
-    println("current motor position: $(pos)")
-
-    # Disconnect from motor
-    closeDevices(D)
-
-    return pos
-end
-
-function scan(startPos::Integer, endPos::Integer; stepSize=100, file="", setup="test/vna_20G_3G.txt", motor="Big Chungus")
+function scan(;
+    stepSize=100.0,
+    steps=0,
+    file="",
+    setup="test/vna_20G_3G.txt",
+    motor="Big Chungus"
+    )
 
     # Connect to the motor
     infoXIMC();
@@ -38,50 +30,46 @@ function scan(startPos::Integer, endPos::Integer; stepSize=100, file="", setup="
     #   pos     is a Vector{Int} (given in steps, 1 step = 12.5 um)
     #   freq    is a Vector{Int}
     freq = VNA.getFrequencies(vna)
-    S, pos = _scan(vna, D[1], startPos, endPos; stepSize=1000)
+    S, deltaX = _scan(vna, D[1]; stepSize=stepSize, steps=steps)
 
     # Disconnect from motor
     closeDevices(D)
 
     if file != ""
-        @save "data.jld2" S pos freq
+        @save "data.jld2" S freq deltaX
     end
 
 
     # Disconnect from VNA
     VNA.disconnect(vna)
 
-    return (S, pos, freq)
+    return (S, freq, deltaX)
 end
-
-
-### Functions ###
 
 # Scans the given range
 # Performing a sweep at each position
-function _scan(socket::Sockets.TCPSocket, D::DeviceId, startPos::Integer, endPos::Integer; stepSize::Integer=250)
-    posSet = getMeasurementPositions(startPos, endPos; stepSize=stepSize)
-    data = []
+function _scan(
+    socket::Sockets.TCPSocket,
+    D::DeviceId;
+    stepSize=100.0,
+    steps::Integer=0
+    )
 
-    for p in posSet
+    data = []
+    deltaX = 0
+
+    for i in 0..steps
         # Move and wait until position is reached
-        commandMove(D, p, 0)
+        deltaX = commandMoveRelative(D, stepSize)
         commandWaitForStop(D)
 
         # Perform the sweep
         push!(data, VNA.getTrace(socket))
+
+        println("Step $(0) \t Position (um) = $(i*deltaX)")
     end
 
-    return (data, posSet)
-end
-
-# Creates the set of positions, where to perform a measurement
-function getMeasurementPositions(startPos::Integer, endPos::Integer; stepSize::Integer=250)
-    if startPos <= endPos
-        return Vector{Integer}(startPos:stepSize:endPos)
-    else
-        return reverse(Vector{Integer}(endPos:stepSize:startPos))
-    end
+    return (data, deltaX)
 end
 
 end

@@ -222,6 +222,32 @@ function commandMove(device::DeviceId,pos::Int32,upos::Int32; info=false)
     return result
 end
 
+function commandMoveRelative(device::DeviceId, deltaPos::Int32, deltaUPos::Int32; info=false)
+    info && println("\nGoing to $pos, $upos")
+
+    result = command_mover(device,pos,upos)
+
+    info && println("\nResult: $result")
+
+    return result
+end
+
+# Takes the position in micrometers
+# Returns actual stepSize possible with the step settings
+function commandMoveRelative(device::DeviceId, deltaPos; info=false)
+    engine = getEngineSettings(D)
+    microsteps = 2 ^ (engine["MicrostepMode"] - 1)
+    stepSize = 12.5 # um
+    uStepSize = 12.5 / microsteps
+
+    step = Int32(floor( deltaPos / stepSize ))
+    uStep = Int32(round( (deltaPos % stepSize) / uStepSize ))
+
+    commandMoveRelative(device, step, uStep; info=info)
+
+    return step*stepSize + uStep*uStepSize
+end
+
 const commandMove(device::DeviceId,pos::Real,upos::Real; info=false) = commandMove(device,Int32(pos),Int32(upos); info=info)
 
 function commandMove(device::DeviceId,pos::Position; info=false)

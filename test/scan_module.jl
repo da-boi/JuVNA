@@ -1,6 +1,6 @@
 include("../src/scan.jl")
 using .Scan
 
-getCurrentPosition(motor="Monica")
+# setMicroStepMode(D, mode=MICROSTEP_MODE_FRAC_256)
 
-scan(22000, 26000; stepSize=1000, file="data.jld2", motor="Monica")
+scan(stepSize=100.0, steps=10, file="data.jld2", motor="Monica")
