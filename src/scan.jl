@@ -6,19 +6,33 @@ include("JuVNA.jl")
 import .VNA
 using JLD2, Sockets
 
-export scan, getCurrentPosition, setMicroStepMode
+export scan, getCurrentPosition, setMicroStepMode,
+    MICROSTEP_MODE_FULL,
+	MICROSTEP_MODE_FRAC_2,
+	MICROSTEP_MODE_FRAC_4,
+	MICROSTEP_MODE_FRAC_8,
+	MICROSTEP_MODE_FRAC_16,
+	MICROSTEP_MODE_FRAC_32,
+	MICROSTEP_MODE_FRAC_64,
+	MICROSTEP_MODE_FRAC_128,
+	MICROSTEP_MODE_FRAC_256
 
 function scan(;
-    stepSize=100.0,
+    stepSize=1,
     steps=0,
     file="",
     setup="test/vna_20G_3G.txt",
-    motor="Big Chungus"
+    motor="Big Chungus",
+    microstep=0
     )
 
     # Connect to the motor
     infoXIMC();
-    D = requestDevices(motor)
+    D = requestDevices(motor)[1]
+
+    if microstep != 0
+        setMicroStepMode(D, mode=microstep)
+    end
 
     # Connect to the VNA
     vna = VNA.connect()
@@ -30,20 +44,20 @@ function scan(;
     #   pos     is a Vector{Int} (given in steps, 1 step = 12.5 um)
     #   freq    is a Vector{Int}
     freq = VNA.getFrequencies(vna)
-    S, deltaX = _scan(vna, D[1]; stepSize=stepSize, steps=steps)
+    S= _scan(vna, D; stepSize=stepSize, steps=steps)
 
     # Disconnect from motor
     closeDevices(D)
 
     if file != ""
-        @save "data.jld2" S freq deltaX
+        @save "data.jld2" S freq
     end
 
 
     # Disconnect from VNA
     VNA.disconnect(vna)
 
-    return (S, freq, deltaX)
+    return (S, freq)
 end
 
 # Scans the given range
@@ -51,25 +65,31 @@ end
 function _scan(
     socket::Sockets.TCPSocket,
     D::DeviceId;
-    stepSize=100.0,
+    stepSize=1,
     steps::Integer=0
     )
 
     data = []
-    deltaX = 0
 
-    for i in 0..steps
+    engine = getEngineSettings(D)
+    microsteps = 2 ^ (engine.MicrostepMode - 1)
+
+    println("Microstep Mode: 1/$(microsteps)")
+    println("Scanning...")
+    println("Step ")
+
+    for i in 0:stepSize:steps
         # Move and wait until position is reached
-        deltaX = commandMoveRelative(D, stepSize)
+        commandMoveRelative(D, 0, 1)
+        print("$(i) ")
         commandWaitForStop(D)
+        
 
         # Perform the sweep
         push!(data, VNA.getTrace(socket))
-
-        println("Step $(0) \t Position (um) = $(i*deltaX)")
     end
 
-    return (data, deltaX)
+    return data
 end
 
 end

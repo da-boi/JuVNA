@@ -271,6 +271,10 @@ mutable struct calibration_settings_t
     CSS2_B::Cfloat
     FullCurrent_A::Cfloat
     FullCurrent_B::Cfloat
+
+    function calibration_settings_t()
+		new([0 for _ in fieldnames(calibration_settings_t)]...)
+	end
 end
 
 mutable struct controller_name_t
