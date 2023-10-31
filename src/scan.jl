@@ -17,22 +17,43 @@ export scan, getCurrentPosition, setMicroStepMode,
 	MICROSTEP_MODE_FRAC_128,
 	MICROSTEP_MODE_FRAC_256
 
+
+### scan()
+# The function measures the scattering parameter using the VNA for a specified
+# number of usteps. Note, that for usteps=0 the function returns one position.
+# The initial one, without moving.
+#
+## Arguments:
+# usteps: The amount of micro steps to go
+#
+# file: The filename, where to save the data
+#       if none is given, the data is not saved
+#       Note: The data is saved in the JLD2 format, which is a Julia
+#             implementation of the HDF5 format
+#
+# setup: The settings file for the VNA
+#        if none is given, the current VNA settings are not changed
+#
+# motor: The name of the motor to be used
+#
+## Return:
+# Returns a tuple (S, freq)
+# S: is the scattering parameter as a Vector{Vector{ComplexF64}}
+#    where the first index is over the usteps
+#    and the second over the frequencies
+#
+# freq: are the frequencies as a Vector{Float}
 function scan(;
     stepSize=1,
-    steps=0,
+    usteps=0,
     file="",
-    setup="test/vna_20G_3G.txt",
-    motor="Big Chungus",
-    microstep=0
+    setup="",
+    motor="Big Chungus"
     )
 
     # Connect to the motor
     infoXIMC();
     D = requestDevices(motor)[1]
-
-    if microstep != 0
-        setMicroStepMode(D, mode=microstep)
-    end
 
     # Connect to the VNA
     vna = VNA.connect()
@@ -41,10 +62,9 @@ function scan(;
     # Measuring the S-parameter
     # Where
     #   S       is a Vector{Vector{ComplexF64}} (first position, second frequency)
-    #   pos     is a Vector{Int} (given in steps, 1 step = 12.5 um)
     #   freq    is a Vector{Int}
     freq = VNA.getFrequencies(vna)
-    S= _scan(vna, D; stepSize=stepSize, steps=steps)
+    S = _scan(vna, D; stepSize=stepSize, steps=usteps)
 
     # Disconnect from motor
     closeDevices(D)
@@ -78,7 +98,9 @@ function _scan(
     println("Scanning...")
     println("Step ")
 
-    for i in 0:stepSize:steps
+    push!(data, VNA.getTrace(socket))
+
+    for i in 1:stepSize:steps
         # Move and wait until position is reached
         commandMoveRelative(D, 0, 1)
         print("$(i) ")
